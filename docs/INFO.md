@@ -1,0 +1,19 @@
+# Documentation Folder
+
+Welcome to the documentation section of the GraphFusionVulDetect project. Here, you'll find all the necessary information organized into two main subfolders:
+
+## Subfolders
+
+### 📚 baselines
+Dive into this subfolder to explore references to other methods and papers that share the same objective as our research. This collection of baseline approaches is essential for comparative analysis. Here are some of the methods we've chosen to compare our work with:
+- `AME`             (Conference/Jurnal: IJCAI 2021 (A), **Status: On going...**)
+- `TMP`             (Conference/Jurnal: IJCAI 2020 (A), **Status: On going...**)
+- `CBGRU`           (Conference/Jurnal: Sensor 2022 (Q2), **Status: Stopped ❌, Reason: Low quality Journal**)
+- `DeeSCVHunter`    (Conference/Jurnal: IJCNN 2021 (A / A*), **Status: On going...**)
+- `MANDO-HGT`       (Conference/Jurnal: ..., **Status: On going...**)
+- `MANDO`           (Conference/Jurnal: ..., **Status: On going...**)
+- `Peculiar`        (Conference/Jurnal: IEEE ISSRE 2021 (A*), **Status: Stopped ❌, Reason: Didn't have permission to access Pretrained Model**)
+- `VulBERTa`        (Conference/Jurnal: IJCNN 2022 (A / A*), **Status: Finished Run Baseline ✅**)
+
+### 📝 report
+This subfolder is your go-to resource for detailed summaries of our work. It includes comprehensive information about our method, experiments, and the performance of other baseline methods on our datasets. Discover the depth of our research and findings here.
