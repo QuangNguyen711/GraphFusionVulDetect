@@ -32,5 +32,5 @@ This section provides an overview of the project management plan:
 
 - Paper's Members: **Quang Nguyen, Tuyen Vu, Minh Pham, Kien Nguyen, Cong Tran**
 - Project's Manager: **Quang Nguyen**
-- Project's Deadline: **[Deadline Management](MANAGE.md)**
+- Project's Deadline: **[Deadline Management](https://docs.google.com/spreadsheets/d/1me-MNCB5dyuMrlcBzOYPJIa8dpLVTSRhY24xz-vFkEM/edit?usp=sharing)**
 
