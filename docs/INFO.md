@@ -17,7 +17,7 @@ Dive into this subfolder to explore references to other methods and papers that 
 
 Other approaches are being found so that they're suitable for our research in aspects of (Conference need to be A/A*, Journal need to be Q1, **need Source code**):
 - `EA-RGCN`        (Conference/Jurnal: Journal of Systems and Software 2023 (Q1))
-- `ASSBert`      (Conference/Jurnal: Journal of Information Security and Applications 2023 (Q1))
+- `ASSBert`        (Conference/Jurnal: Journal of Information Security and Applications 2023 (Q1))
 
 ### 📝 report
 This subfolder is your go-to resource for detailed summaries of our work. It includes comprehensive information about our method, experiments, and the performance of other baseline methods on our datasets. Discover the depth of our research and findings here.
