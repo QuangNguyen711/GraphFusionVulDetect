@@ -5,8 +5,8 @@ This section provides an overview of the resource management plan for the ScamSo
 This section outlines the data resources and their locations.
 
 - Drive Storage: **[ScamSolidityCodeDetection](https://drive.google.com/drive/folders/1nl1NDQeVFKNsH-nb1JEYrwYSJZ_36qJZ?usp=sharing)**
-- Drive Solidity Source Codes: **ScamSolidityCodeDetection -> SolCodeDataset**
-- Drive Solidity Function Codes: **ScamSolidityCodeDetection -> SolFunctionDataset**
+- Drive Solidity Source Codes: **ScamSolidityCodeDetection -> CodeSyntaxDataset**
+- Drive Solidity Function Codes: **ScamSolidityCodeDetection -> FunctionSyntaxDataset**
 
 ## 2. Notebooks
 This section lists the Jupyter notebooks used in various stages of the project: **[Notebooks Folder](notebooks/INFO.md)**
