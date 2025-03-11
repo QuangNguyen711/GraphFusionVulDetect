@@ -28,7 +28,7 @@ Notebooks related to the comparison of current method with other state-of-the-ar
 - **[6.2 Baseline Comparison - VulBERTa](notebooks/VulBERTa.ipynb)** - Run on Kaggle
 - **[6.3 Baseline Comparison - TMP](notebooks/baselines/TMP/GNNSCVulDetector.ipynb)** - Run on Colab
 - **[6.4 Baseline Comparison - AME](notebooks/baselines/AME/AME.ipynb)** - Run on Colab
-- **[6.5 Baseline Comparison - EARGCN](notebooks/baselines/EA-RGCN/)** - Run on Kaggle
+- **[6.5 Baseline Comparison - EARGCN](baselines/EA-RGCN/)** - Run on Kaggle
 - **[6.5.1 Training Dataset Processing - EARGCN](baselines/EA-RGCN/Data_processing/ea-rgcn-timestamp-sg-train.ipynb)** - Run on Kaggle
 - **[6.5.2 Testing Dataset Processing - EARGCN](baselines/EA-RGCN/Data_processing/ea-rgcn-timestamp-sg-test.ipynb)** - Run on Kaggle
 - **[6.5.3 Word2Vec Processing - EARGCN](baselines/EA-RGCN/Data_processing/ea-rgcn-timestamp-word2vec.ipynb)** - Run on Kaggle
