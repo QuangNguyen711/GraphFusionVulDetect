@@ -14,7 +14,7 @@ class RuntimeContext(object):
     def __init__(self):
         """ initialization """
         # Set default configuration
-        self.dataset_name = "Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset"
+        self.dataset_name = "Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset" # "Quangnguyen711/Qualified_Syntax_TimestampDependency_Dataset"
         self.output_dir = "./codebert-output"
         self.model_name_or_path = "microsoft/codebert-base"  # Use CodeBERT model
         self.config_name = "microsoft/codebert-base"
@@ -38,8 +38,9 @@ class RuntimeContext(object):
 class PipelineFinetuning:
 
     @staticmethod
-    def runtime():
+    def runtime(dataset_name="Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset"):
         args = RuntimeContext()
+        args.dataset_name = dataset_name
         print("device: %s, n_gpu: %s" %(args.device, args.n_gpu))
 
         # Set seed
@@ -76,4 +77,4 @@ class PipelineFinetuning:
         evaluate(args, model, tokenizer)
 
         push_to_huggingface(model, tokenizer, args, repo_name="Quangnguyen711/codebert-syntax-solidity-re-entrancy", 
-                       token="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")
+                       token="<TOKEN>")

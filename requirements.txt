@@ -1,4 +1,3 @@
-dgl
 networkx
 slither-analyzer
 transformers
@@ -14,3 +13,8 @@ tqdm
 python-dotenv
 google-generativeai
 py-solc
+numpy
+typer
+rootutils
+nltk
+tqdm

@@ -1,0 +1,5 @@
+%%capture
+# Use Gpu
+!pip install dgl==2.0.0 -f https://data.dgl.ai/wheels/cu121/repo.html
+# Only use cpu
+# !pip install dgl==1.1.2
