@@ -1,0 +1,16 @@
+dgl
+networkx
+slither-analyzer
+transformers
+datasets
+torch
+accelerate
+evaluate
+pygraphviz
+matplotlib
+pandas
+scikit-learn
+tqdm
+python-dotenv
+google-generativeai
+py-solc
