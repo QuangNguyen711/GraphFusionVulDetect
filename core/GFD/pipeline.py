@@ -92,9 +92,9 @@ class PipelineGFD:
             result['loss'].append(sum(bloss)/len(bloss))
             result['epoch'].append(epoch)
             print("Epoch:", epoch, "   Loss:", sum(bloss)/len(bloss),f"   Accuracy: {(accuracy_score(bpred, blabel)* 100):.4f}%")
-            if os.path.exists(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[1]}_{len(hfeats)}_{gptype}_f{n_feats}") == False:
-                os.mkdir(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[1]}_{len(hfeats)}_{gptype}_f{n_feats}")
-            model.save(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[1]}_{len(hfeats)}_{gptype}_f{n_feats}/model_{os.path.basename(self.data_path)}_{str(epoch).zfill(2)}.pt")
+            if os.path.exists(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}") == False:
+                os.mkdir(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}")
+            model.save(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}/model_{os.path.basename(self.data_path)}_{str(epoch).zfill(2)}.pt")
             model.eval()
             with torch.no_grad():
                 tpred, tlabel = [], []
@@ -126,7 +126,7 @@ class PipelineGFD:
         model.to(model.device)
         print(model)
         # You need to change the model loading path
-        model.load(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[1]}_{len(hfeats)}_{gptype}_f{n_feats}/model_{os.path.basename(self.data_path)}_00.pt")
+        model.load(f"/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}/model_{os.path.basename(self.data_path)}_00.pt")
         result = {
             "data": os.path.basename(self.data_path),
             "loss":[],

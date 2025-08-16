@@ -7,8 +7,10 @@ requires-python = ">=3.10"
 dependencies = [
     "datasets>=4.0.0",
     "numpy>=2.2.6",
+    "rootutils>=1.0.7",
     "scikit-learn>=1.7.1",
     "torch>=2.8.0",
     "tqdm>=4.67.1",
     "transformers>=4.55.2",
+    "typer>=0.16.0",
 ]
