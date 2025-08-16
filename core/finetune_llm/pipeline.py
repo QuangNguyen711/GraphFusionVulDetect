@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 import os
 from core.finetune_llm.components.bertmodel import CodeBERTModel
 from core.finetune_llm.dataset import CodeDataset
-from core.finetune_llm.phase import train
+from core.finetune_llm.phase.train import train
 from core.finetune_llm.phase.eval import evaluate
 from core.finetune_llm.utils import push_to_huggingface, set_seed
 import torch
