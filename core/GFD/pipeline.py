@@ -93,7 +93,7 @@ class PipelineGFD:
             result['epoch'].append(epoch)
             print("Epoch:", epoch, "   Loss:", sum(bloss)/len(bloss),f"   Accuracy: {(accuracy_score(bpred, blabel)* 100):.4f}%")
             if os.path.exists(f"/kaggle/working/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}") == False:
-                os.mkdir(f"/kaggle/working/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}")
+                os.makedirs(f"/kaggle/working/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}")
             model.save(f"/kaggle/working/ScamSolidityCodeDetection/ModelWeights/{mtype[0]}_{mtype[0]}_{len(hfeats)}_{gptype}_f{n_feats}/model_{os.path.basename(self.data_path)}_{str(epoch).zfill(2)}.pt")
             model.eval()
             with torch.no_grad():
