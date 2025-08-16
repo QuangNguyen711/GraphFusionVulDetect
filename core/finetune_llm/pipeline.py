@@ -38,7 +38,14 @@ class RuntimeContext(object):
 class PipelineFinetuning:
 
     @staticmethod
-    def runtime(dataset_name="Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset"):
+    def runtime(mode, dataset_name="Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset"):
+        if mode == "train":
+            PipelineFinetuning.runtime_training(dataset_name)
+        elif mode == "eval":
+            PipelineFinetuning.runtime_evaluation(dataset_name)
+
+    @staticmethod
+    def runtime_training(dataset_name="Quangnguyen711/Qualified_Syntax_Reentrancy_Dataset"):
         args = RuntimeContext()
         args.dataset_name = dataset_name
         print("device: %s, n_gpu: %s" %(args.device, args.n_gpu))
@@ -66,6 +73,25 @@ class PipelineFinetuning:
 
         # Train the model
         train(args, train_dataset, model, tokenizer)
+
+
+    @staticmethod
+    def runtime_evaluation(dataset_name):
+        args = RuntimeContext()
+        args.dataset_name = dataset_name
+        print("device: %s, n_gpu: %s" %(args.device, args.n_gpu))
+        # Set seed
+        set_seed(args)
+
+        # Load model components - Use CodeBERT instead of GraphCodeBERT
+        config = RobertaConfig.from_pretrained(
+            args.config_name if args.config_name else args.model_name_or_path)
+        config.num_labels = 2  # Binary classification
+        tokenizer = RobertaTokenizer.from_pretrained(args.tokenizer_name)
+
+        # Load CodeBERT base model
+        encoder = RobertaModel.from_pretrained(args.model_name_or_path, config=config)
+        model = CodeBERTModel(encoder, config, tokenizer, args)
 
         # Load best model for testing
         checkpoint_prefix = 'checkpoint-best-loss/model.bin'
