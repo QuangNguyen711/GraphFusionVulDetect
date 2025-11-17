@@ -1,7 +1,7 @@
 from transformers import RobertaTokenizer, RobertaModel
 import torch
 import logging
-from src.utils.helper import seed_everything, install_solc_versions
+from src.utils.helper import seed_everything, prepare_solc_artifacts
 from src.model.GraphClasifier import GraphNN
 from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
@@ -9,7 +9,8 @@ from src.graph.builder import build_graph
 logger = logging.getLogger("Slither-simil")
 
 seed_everything(42)
-install_solc_versions()
+
+prepare_solc_artifacts()
 
 # Load the embedding tokenizer and model
 embedd_tokenizer = RobertaTokenizer.from_pretrained("Quangnguyen711/codebert-syntax-solidity-time-dep")

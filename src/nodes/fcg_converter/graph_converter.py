@@ -275,16 +275,16 @@ def get_call_graph(contract_path):
 
     print(sc_version)
     
-    solc_compiler = f'/content/ge-sc/artifacts/solc-{sc_version}'
+    solc_compiler = f'ge-sc-artifacts/solc-{sc_version}'
     if not os.path.exists(solc_compiler):
-        solc_compiler = f'/content/ge-sc/artifacts/solc-0.4.24'
+        solc_compiler = f'ge-sc-artifacts/solc-0.4.24'
         
     try:
         slither = Slither(contract_path, solc=solc_compiler)
     except Exception as e:
         print("Error compiling:", e)
         print("So change to default version 0.4.24")
-        solc_compiler = f'/content/ge-sc/artifacts/solc-0.4.24'
+        solc_compiler = f'ge-sc-artifacts/solc-0.4.24'
         try:
             slither = Slither(contract_path, solc=solc_compiler)
             print("Fixed sucessfully!")
