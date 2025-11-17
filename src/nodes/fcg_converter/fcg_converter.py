@@ -1,101 +1,142 @@
-# File: nodes/graph_converter.py
+# File: nodes/fcg_converter/fcg_converter.py
 
-from langchain_core.runnables import RunnableConfig
-from src.graph.state import State
-import os
 import json
+import os
 import traceback
 from pathlib import Path
-import networkx as nx
+
 import dgl
-import pandas as pd
-import random
-from .graph_converter import get_call_graph
+import networkx as nx
+from langchain_core.runnables import RunnableConfig
+
+from src.graph.state import State
 from .embedding_generator import extract_function_code, get_embeddings
+from .graph_converter import get_call_graph
+
 
 def convert_to_fcg(state: State, config: RunnableConfig) -> State:
-    """NODE: Chuyển file smart contract định dạng .sol sang dạng file .fcg (Function Call Graph)."""
-    """Process a Solidity file to generate a DGL graph with contract_index."""
+    """
+    Converts a Solidity source file into a Function Call Graph (FCG).
 
-    solFileSrc = state["sol_file_path"]
-    fcgFileDst = state["fcg_save_dir"]
-    
+    This node performs several key steps:
+    1.  Generates a raw FCG from the .sol file using Slither.
+    2.  Creates a stable, deterministic mapping from function names to integer IDs
+        by sorting the node names alphabetically.
+    3.  Extracts graph-based features (e.g., degree, centrality) for each node.
+    4.  Generates code embeddings for each function's source code.
+    5.  Saves the final graph as a DGL graph object (.fcg) and the stable node
+        mapping and source code snippets to a corresponding .json file.
+
+    Args:
+        state (State): The current state object containing the path to the
+                       input Solidity file (`sol_file_path`) and the
+                       directory to save the output (`fcg_save_dir`).
+        config (RunnableConfig): The configuration object, which provides access
+                                 to the embedding model and tokenizer.
+
+    Returns:
+        State: The updated state object with paths to the newly created
+               .fcg file and mapping .json file. In case of an error, these
+               fields will contain error messages.
+    """
     try:
-        fcgFileDst = Path(fcgFileDst)
-        fcg_file = fcgFileDst / f'{Path(solFileSrc).stem}.fcg'
-        print(f"Processing {solFileSrc}")
-        # Generate call graph and code mappings
-        G = get_call_graph(solFileSrc)
-        G = nx.DiGraph(G)
+        tokenizer = config["configurable"]["embedd_tokenizer"]
+        model = config["configurable"]["embedd_model"]
+        sol_file_src = state["sol_file_path"]
+        fcg_save_dir = Path(state["fcg_save_dir"])
+
+        print(f"Processing {sol_file_src}")
+        fcg_file_path = fcg_save_dir / f'{Path(sol_file_src).stem}.fcg'
+
+        # Generate the initial graph from the source file
+        graph = get_call_graph(sol_file_src)
+        print(f"--- INFO: Graph from Slither has {len(graph.nodes())} nodes. ---")
         
-        if len(G.nodes()) == 0:
-            print(f"Compiler failed on: {solFileSrc}")
-            return None
-        
-        # Compute graph metrics and contract indices
-        mappings, mappingsH, contract_indices, mapping_code, node_mapping = {}, {}, {}, {}, {}
-        katz = nx.katz_centrality(G)
-        closeness = nx.closeness_centrality(G)
-        clustering = nx.clustering(G)
-        
-        # Map contracts to indices
-        contract_names = [data['contract_name'] for node, data in G.nodes(data=True)]
-        unique_contracts = sorted(set(contract_names))
-        contract_to_idx = {name: idx for idx, name in enumerate(unique_contracts)}
-        
-        for idx, (node, data) in enumerate(G.nodes(data=True)):
-            # print(data)
-            mappings[node] = [
-                G.in_degree(node),
-                G.out_degree(node),
-                katz[node],
-                closeness[node],
-                clustering[node]
+        if not graph or len(graph.nodes()) == 0:
+            print(f"Compiler failed or produced an empty graph for: {sol_file_src}")
+            state["fcg_file_path"] = f"Error: No graph generated for {sol_file_src}"
+            state["mapping_file_path"] = f"Error: No graph generated for {sol_file_src}"
+            return state
+
+        # Ensure the graph is a standard DiGraph
+        graph = nx.DiGraph(graph)
+
+        # Create a stable, deterministic mapping from node names to integer indices.
+        # Sorting alphabetically guarantees the order is the same every time.
+        sorted_node_names = sorted(list(graph.nodes()))
+        stable_name_to_idx_map = {node_name: i for i, node_name in enumerate(sorted_node_names)}
+
+        # --- Feature and Embedding Extraction ---
+        features, embeddings, contract_indices = {}, {}, {}
+        function_codes, final_json_node_mapping = {}, {}
+
+        # Pre-calculate graph-wide metrics
+        katz_centrality = nx.katz_centrality(graph)
+        closeness_centrality = nx.closeness_centrality(graph)
+        clustering_coeffs = nx.clustering(graph)
+
+        # Create a mapping for contract names to indices
+        contract_names = {data['contract_name'] for _, data in graph.nodes(data=True)}
+        contract_to_idx = {name: idx for idx, name in enumerate(sorted(list(contract_names)))}
+
+        # Iterate using the guaranteed sorted order for deterministic feature assignment
+        for node_name in sorted_node_names:
+            data = graph.nodes[node_name]
+            stable_idx = stable_name_to_idx_map[node_name]
+
+            # Basic graph features
+            features[node_name] = [
+                graph.in_degree(node_name),
+                graph.out_degree(node_name),
+                katz_centrality[node_name],
+                closeness_centrality[node_name],
+                clustering_coeffs[node_name],
             ]
-            code_start = data['node_source_code_start']
-            code_length = data['node_source_code_length']
-            function_name = data['label'].split(".sol_")[1]
-            function_name = function_name.replace("_", ".") 
-            function_code = extract_function_code(solFileSrc, code_start, code_length)
-            mapping_code[function_name] = function_code
-            node_mapping[function_name] = idx
-            mappingsH[node] = get_embeddings(extract_function_code(solFileSrc, code_start, code_length))
-            contract_indices[node] = contract_to_idx[data['contract_name']]
             
-        # Set node attributes
-        nx.set_node_attributes(G, mappings, 'features')
-        nx.set_node_attributes(G, mappingsH, 'featuresH')
-        nx.set_node_attributes(G, contract_indices, 'contract_index')
+            # Extract source code and generate embeddings
+            function_code = extract_function_code(
+                sol_file_src, data['node_source_code_start'], data['node_source_code_length']
+            )
+            embeddings[node_name] = get_embeddings(tokenizer, model, function_code)
+            
+            # Store contract index
+            contract_indices[node_name] = contract_to_idx.get(data['contract_name'], -1)
+            
+            # Prepare data for the final JSON mapping file
+            pretty_function_name = data['label'].split(".sol_")[1].replace("_", ".")
+            function_codes[pretty_function_name] = function_code
+            final_json_node_mapping[pretty_function_name] = stable_idx
+            
+        # Set the extracted data as node attributes in the NetworkX graph
+        nx.set_node_attributes(graph, features, 'features')
+        nx.set_node_attributes(graph, embeddings, 'featuresH')
+        nx.set_node_attributes(graph, contract_indices, 'contract_index')
         
-        # Convert to DGL graph
-        cg = nx.convert_node_labels_to_integers(G)
-        dg = dgl.from_networkx(cg, node_attrs=['features', 'featuresH', 'contract_index'])
+        # Relabel the graph nodes to stable integer IDs for DGL conversion
+        relabeled_graph = nx.relabel_nodes(graph, stable_name_to_idx_map)
         
-        # Save DGL graph if it doesn't exist
-        if not os.path.exists(fcg_file):
-            dgl.data.utils.save_graphs(str(fcg_file), [dg])
-            print(f"Saved FCG: {fcg_file}")
+        # Convert to DGL graph, preserving node attributes
+        dgl_graph = dgl.from_networkx(relabeled_graph, node_attrs=['features', 'featuresH', 'contract_index'])
+        
+        # Save the DGL graph
+        os.makedirs(fcg_save_dir, exist_ok=True)
+        dgl.data.utils.save_graphs(str(fcg_file_path), [dgl_graph])
+        print(f"Saved FCG: {fcg_file_path}")
 
-        # Save mappings to JSON
-        mapping_node_code = {
-            "node": node_mapping,
-            "code": mapping_code
-        }
-
-        # print(mapping_node_code)
-        json_path = fcgFileDst / f'{Path(solFileSrc).stem}_mapping.json'
-        os.makedirs(fcgFileDst, exist_ok=True)
+        # Save the stable mapping and code snippets to a JSON file
+        mapping_data = {"node": final_json_node_mapping, "code": function_codes}
+        json_path = fcg_save_dir / f'{Path(sol_file_src).stem}_mapping.json'
         with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(mapping_node_code, f, indent=4, ensure_ascii=False)
+            json.dump(mapping_data, f, indent=4, ensure_ascii=False)
         print(f"Saved mapping: {json_path}")
+        
         state["mapping_file_path"] = str(json_path)
-        state["fcg_file_path"] = str(fcg_file)
+        state["fcg_file_path"] = str(fcg_file_path)
     
     except Exception as e:
-        print(f"Error processing {solFileSrc}: {str(e)}")
+        print(f"Error processing {sol_file_src}: {e}")
         traceback.print_exc()
-        state["fcg_file_path"] = f"Error in processing file: {str(e)}"
-        state["mapping_file_path"] = f"Error in processing file: {str(e)}"
+        state["fcg_file_path"] = f"Error in processing file: {e}"
+        state["mapping_file_path"] = f"Error in processing file: {e}"
     
     return state
-        

@@ -1,52 +1,68 @@
-from langchain_core.runnables import RunnableConfig
-from src.graph.state import State
+# File: src/nodes/src_vul_detector.py
+
 import dgl
 import torch
 import torch.nn.functional as F
+from langchain_core.runnables import RunnableConfig
+
+from src.graph.state import State
+
 
 def detect_vulnerability_src(state: State, config: RunnableConfig) -> State:
     """
-    Performs inference on a single smart contract graph.
+    Performs vulnerability detection on a smart contract's Function Call Graph (FCG).
 
-    model: The trained and loaded GraphNN model.
-    fcg_path: Path to the .fcg file of the smart contract.
-    class_map: A dictionary mapping class indices to names (e.g., {0: "Non-Vulnerable", 1: "Vulnerable"}).
-    
-    return: A tuple of (predicted_class_name, confidence_score)
+    This node loads a pre-processed DGL graph from the path specified in the
+    state, prepares it for inference by adding self-loops and batching, and
+    then passes it through a trained Graph Neural Network model to predict
+    whether the contract is vulnerable. The final prediction and confidence
+    score are added back into the state object.
+
+    Args:
+        state (State): The current state, which must contain the `fcg_file_path`.
+                       The result will be added to this state object.
+        config (RunnableConfig): The configuration object, which provides access
+                                 to the loaded GNN model via `graph_vul_model`.
+
+    Returns:
+        State: The updated state object containing the `predicted_class`
+               (e.g., "Vulnerable") and the `confidence_score`.
     """
-
     model = config["configurable"]["graph_vul_model"]
     fcg_path = state["fcg_file_path"]
     class_map = {0: "Non-Vulnerable", 1: "Vulnerable"}
-    
-    # Ensure gradients are not calculated
+
+    # Perform inference without calculating gradients to save memory and computation
     with torch.no_grad():
-        # 1. Load the graph using our new inference loader
+        # Load the graph from the specified file path
         graph = dgl.load_graphs(fcg_path)[0][0]
+        
+        # Use the code embeddings ('featuresH') as the primary node features
         graph.ndata["features"] = graph.ndata["featuresH"]
         
-        # 2. Perform the same preprocessing as in training (add self-loop)
+        # Add self-loops to the graph, a common practice for GNNs
         graph = dgl.add_self_loop(graph)
         
-        # 3. Create a batch containing only our single graph
+        # Create a batch containing the single graph and move it to the GPU
         batched_graph = dgl.batch([graph]).to(model.device)
         
-        # 4. Get the node features
-        features = batched_graph.ndata['features']
+        # Extract node features and move them to the GPU
+        features = graph.ndata['features'].to(model.device)
         
-        # 5. Get model predictions (logits)
+        # Get the raw model output (logits)
         logits = model(batched_graph, features)
         
-        # 6. Convert logits to probabilities
+        # Convert logits to a probability distribution using softmax
         probabilities = F.softmax(logits, dim=1)
         
-        # 7. Get the predicted class index and the corresponding confidence
+        # Find the class with the highest probability
         confidence, predicted_idx_tensor = torch.max(probabilities, 1)
         predicted_idx = predicted_idx_tensor.item()
         
-        # 8. Map index to class name
+        # Map the predicted index to its corresponding class name
         predicted_class_name = class_map[predicted_idx]
     
     state["predicted_class"] = predicted_class_name
     state["confidence_score"] = confidence.item()
+    
     return state
