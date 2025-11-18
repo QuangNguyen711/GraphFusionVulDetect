@@ -63,6 +63,9 @@ def prepare_solc_artifacts(destination_path: str = 'ge-sc-artifacts'):
         if os.path.isdir(source_dir):
             version_name = os.path.basename(source_dir)
             dest_dir = os.path.join(destination_path, version_name)
+            if os.path.exists(dest_dir):
+                # print(f"Đã tồn tại {dest_dir}, bỏ qua sao chép.")
+                continue
             try:
                 shutil.copytree(source_dir, dest_dir, dirs_exist_ok=True)
                 # Đặt quyền thực thi, rất quan trọng trên Linux/macOS
