@@ -4,6 +4,7 @@ from src.graph.state import State
 from src.nodes.fcg_converter.fcg_converter import convert_to_fcg
 from src.nodes.func_vul_detector import detect_vulnerability_func
 from src.nodes.src_vul_detector import detect_vulnerability_src
+from src.nodes.func_vul_explainer import explain_vulnerability_func
 
 def src_is_vulnerable(state: State) -> str:
     """Conditional function to check if the source code vulnerability detection predicted 'Vulnerable'."""
@@ -19,6 +20,8 @@ def build_graph() -> StateGraph:
     graph_builder.add_node("convert_to_fcg", convert_to_fcg)
     graph_builder.add_node("detect_vulnerability_src", detect_vulnerability_src)
     graph_builder.add_node("detect_vulnerability_func", detect_vulnerability_func)
+    graph_builder.add_node("explain_vulnerability_func", explain_vulnerability_func)
+
     graph_builder.add_edge(START, "convert_to_fcg")
     graph_builder.add_edge("convert_to_fcg", "detect_vulnerability_src")
     graph_builder.add_conditional_edges(
@@ -29,7 +32,8 @@ def build_graph() -> StateGraph:
             "Vulnerable": "detect_vulnerability_func"
         }
     )
-    graph_builder.add_edge("detect_vulnerability_src", END)
-    graph_builder.add_edge("detect_vulnerability_func", END)
+    
+    graph_builder.add_edge("detect_vulnerability_func", 'explain_vulnerability_func')
+    graph_builder.add_edge("explain_vulnerability_func", END)
 
     return graph_builder.compile()

@@ -77,7 +77,7 @@ def detect_vulnerability_func(state: State, config: RunnableConfig) -> State:
                     "confidence": f"{confidence:.2%}"
                 })
             
-            print(f"Function: {node_name}, Prediction: {pred.item()}, Confidence: {confidence:.2%}")
+            # print(f"Function: {node_name}, Prediction: {pred.item()}, Confidence: {confidence:.2%}")
     else:
         print(f"Warning: Mapping file not found at {mapping_path}. Cannot map results to names.")
         # Create a basic result list even if mapping is missing

@@ -1,3 +1,5 @@
+# File: main.py
+
 from transformers import RobertaTokenizer, RobertaModel
 import torch
 import logging
@@ -5,6 +7,7 @@ from src.utils.helper import seed_everything, prepare_solc_artifacts
 from src.model.GraphClasifier import GraphNN
 from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
+# from langgraph_openai import Open
 import json
 
 logger = logging.getLogger("Slither-simil")
@@ -35,14 +38,22 @@ node_vul_model = node_vul_model.to(device)
 node_vul_model.eval()
 
 # Load vulnerability explaination model
-
+llm = ChatOpenAI(
+    model_name="gemini-2.5-flash",
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    api_key="AIzaSyA-nSMTM4TIS-QOVpqrklwdhU8aCamBAQA",
+    temperature=0.5,
+    max_retries=3,
+    request_timeout=180
+)
 
 config = {
     "configurable": {
         "embedd_tokenizer": embedd_tokenizer,
         "embedd_model": embedd_model,
         "graph_vul_model": graph_vul_model,
-        "node_vul_model": node_vul_model
+        "node_vul_model": node_vul_model,
+        "llm": llm,
     }
 }
 
@@ -50,7 +61,7 @@ graph = build_graph()
 
 if __name__ == "__main__":
     print("Configuration loaded successfully.")
-    sol_file_path = "datasets/SmartContractVulnerabilityDetection/SourceCodeSyntaxDataset/TimestampDependencyDataset/Train/Vulnerable/7338.sol"
+    sol_file_path = "datasets/SmartContractVulnerabilityDetection/SourceCodeSyntaxDataset/TimestampDependencyDataset/Test/Vulnerable/0x39aa4006ee5941c0c0e41b924fdafcb2c4c918e8.sol"
     fcg_save_dir = "output"
     print(f"Solidity file path: {sol_file_path}")
 
@@ -62,6 +73,6 @@ if __name__ == "__main__":
     result_state = graph.invoke(state, config)
     print("Predicted class:", result_state.get("predicted_class"))
     print("Confidence score:", result_state.get("confidence_score"))
-    print("Function-level vulnerability predictions:")
-    for func_result in result_state.get("func_vulnerability_predictions", []):
+    print("Function-level vulnerability explainations:")
+    for func_result in result_state.get("func_vulnerability_explanations", []):
         print(json.dumps(func_result, indent=2))

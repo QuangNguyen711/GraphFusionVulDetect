@@ -8,3 +8,4 @@ class State(TypedDict):
     predicted_class: Optional[str]
     confidence_score: Optional[float]
     func_vulnerability_predictions: Optional[List[dict]]
+    func_vulnerability_explanations: Optional[List[dict]]
