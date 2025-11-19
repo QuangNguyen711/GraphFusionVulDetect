@@ -21,6 +21,8 @@ def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
 
     explanations = []
     for func_info in func_vulnerability_predictions:
+        if func_info["prediction"] != 1:
+            continue  # Only explain functions predicted as vulnerable
         func_name = func_info["function_name"]
         func_code = func_info["function_code"]
         prompt = (
@@ -29,10 +31,9 @@ def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
             "Please analyze the code and provide a concise, expert explanation.\n\n"
             f"Function Name: `{func_name}`\n"
             f"```solidity\n{func_code}\n```\n\n"
-            "Your analysis should include:\n"
-            "1.  **Vulnerability Confirmation:** State whether you agree with the model's finding and explain why. Point to the specific lines of code that use `block.timestamp` insecurely.\n"
+            "Your analysis should be short and only include these headings:\n"
+            "1.  **Vulnerability Confirmation:** State whether you agree with the model's finding and explain why.\n"
             "2.  **Impact:** Describe the potential consequences if this vulnerability is exploited (e.g., unfair advantage, locked funds).\n"
-            "3.  **Mitigation:** Provide a clear, actionable recommendation on how to fix the code to remove the vulnerability."
         )
         try:
             response = llm.invoke(prompt)

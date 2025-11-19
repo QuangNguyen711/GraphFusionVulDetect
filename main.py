@@ -7,8 +7,12 @@ from src.utils.helper import seed_everything, prepare_solc_artifacts
 from src.model.GraphClasifier import GraphNN
 from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
-# from langgraph_openai import Open
+from langchain_openai import ChatOpenAI
+import os
 import json
+import dotenv
+
+dotenv.load_dotenv()
 
 logger = logging.getLogger("Slither-simil")
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -16,9 +20,17 @@ device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 seed_everything(42)
 prepare_solc_artifacts()
 
+EMBEDD_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH")
+GRAPH_VUL_MODEL_PATH = os.getenv("GRAPH_VUL_MODEL_PATH")
+NODE_VUL_MODEL_PATH = os.getenv("NODE_VUL_MODEL_PATH")
+
+MODEL_NAME = os.getenv("MODEL_NAME")
+BASE_URL = os.getenv("BASE_URL")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 # Load the embedding tokenizer and model
-embedd_tokenizer = RobertaTokenizer.from_pretrained("Quangnguyen711/codebert-solidity-time-dep")
-embedd_model = RobertaModel.from_pretrained("Quangnguyen711/codebert-solidity-time-dep").to(device)
+embedd_tokenizer = RobertaTokenizer.from_pretrained()
+embedd_model = RobertaModel.from_pretrained().to(device)
 embedd_model.eval()
 
 # Load graph vulnerability classificastion model
@@ -39,9 +51,9 @@ node_vul_model.eval()
 
 # Load vulnerability explaination model
 llm = ChatOpenAI(
-    model_name="gemini-2.5-flash",
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    api_key="AIzaSyA-nSMTM4TIS-QOVpqrklwdhU8aCamBAQA",
+    model_name=MODEL_NAME,
+    base_url=BASE_URL,
+    api_key=GEMINI_API_KEY,
     temperature=0.5,
     max_retries=3,
     request_timeout=180

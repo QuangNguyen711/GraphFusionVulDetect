@@ -18,8 +18,12 @@ from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from anyio import to_thread
+import dotenv
+
+dotenv.load_dotenv()
 
 # --- Suppress Slither's verbose output ---
 os.environ['SLITHER_LOG_LEVEL'] = 'CRITICAL'
@@ -33,7 +37,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("Slither-API")
 
 # Use CUDA if available, otherwise CPU
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}")
 
 seed_everything(42)
@@ -41,9 +45,17 @@ prepare_solc_artifacts()
 
 logger.info("Loading models...")
 
+EMBEDD_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH")
+GRAPH_VUL_MODEL_PATH = os.getenv("GRAPH_VUL_MODEL_PATH")
+NODE_VUL_MODEL_PATH = os.getenv("NODE_VUL_MODEL_PATH")
+
+MODEL_NAME = os.getenv("MODEL_NAME")
+BASE_URL = os.getenv("BASE_URL")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 # Load the embedding tokenizer and model
-embedd_tokenizer = RobertaTokenizer.from_pretrained("Quangnguyen711/codebert-solidity-time-dep")
-embedd_model = RobertaModel.from_pretrained("Quangnguyen711/codebert-solidity-time-dep").to(device)
+embedd_tokenizer = RobertaTokenizer.from_pretrained(EMBEDD_MODEL_PATH)
+embedd_model = RobertaModel.from_pretrained(EMBEDD_MODEL_PATH).to(device)
 embedd_model.eval()
 
 # Load graph vulnerability classificastion model
@@ -64,9 +76,9 @@ node_vul_model.eval()
 
 # Load vulnerability explaination model
 llm = ChatOpenAI(
-    model_name="gemini-2.5-flash",
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    api_key="AIzaSyA-nSMTM4TIS-QOVpqrklwdhU8aCamBAQA",
+    model_name=MODEL_NAME,
+    base_url=BASE_URL,
+    api_key=GEMINI_API_KEY,
     temperature=0.5,
     max_retries=3,
     request_timeout=180
@@ -95,6 +107,24 @@ logger.info("Models loaded and graph compiled. API is ready.")
 
 
 app = FastAPI(title="Smart Contract Vulnerability Scanner API", version="1.1.0")
+
+# Add this middleware to your app
+origins = [
+    "http://localhost",
+    "http://localhost:8080", # Add the origin of your frontend if it's served by a server
+    "http://127.0.0.1",
+    "http://127.0.0.1:5500", # Common port for VS Code Live Server
+    "null"  # This is important if you are opening the HTML file directly in the browser (from file://)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Allows specific origins
+    # or allow_origins=["*"] for allowing all, but be specific in production
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods
+    allow_headers=["*"], # Allows all headers
+)
 
 # Define a unique sentinel object to signal the end of the iterator
 _SENTINEL = object()
@@ -156,7 +186,7 @@ async def analyze_contract(file: UploadFile = File(...)):
                 elif node_name == "detect_vulnerability_src":
                     output_data["output"] = {k: v for k, v in node_output_state.items() if k in ["predicted_class", "confidence_score"]}
                 elif node_name == "detect_vulnerability_func":
-                    output_data["output"] = {"vulnerable_functions": node_output_state.get("func_vulnerability_predictions", [])}
+                    output_data["output"] = {k: v for k, v in node_output_state.items() if k in ["func_vulnerability_predictions", "fcg_edges"]}
                 elif node_name == "explain_vulnerability_func":
                      output_data["output"] = {"explanations": node_output_state.get("func_vulnerability_explanations")}
                 

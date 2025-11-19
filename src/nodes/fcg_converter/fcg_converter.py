@@ -26,6 +26,7 @@ def convert_to_fcg(state: State, config: RunnableConfig) -> State:
     4.  Generates code embeddings for each function's source code.
     5.  Saves the final graph as a DGL graph object (.fcg) and the stable node
         mapping and source code snippets to a corresponding .json file.
+    6.  Saves the list of graph edges (using stable integer IDs) to the state.
 
     Args:
         state (State): The current state object containing the path to the
@@ -36,8 +37,9 @@ def convert_to_fcg(state: State, config: RunnableConfig) -> State:
 
     Returns:
         State: The updated state object with paths to the newly created
-               .fcg file and mapping .json file. In case of an error, these
-               fields will contain error messages.
+               .fcg file, mapping .json file, and a list of graph edges.
+               In case of an error, these fields will contain error messages
+               or be empty.
     """
     try:
         tokenizer = config["configurable"]["embedd_tokenizer"]
@@ -56,6 +58,7 @@ def convert_to_fcg(state: State, config: RunnableConfig) -> State:
             print(f"Compiler failed or produced an empty graph for: {sol_file_src}")
             state["fcg_file_path"] = f"Error: No graph generated for {sol_file_src}"
             state["mapping_file_path"] = f"Error: No graph generated for {sol_file_src}"
+            state["fcg_edges"] = []  # Set edges to empty list on failure
             return state
 
         # Ensure the graph is a standard DiGraph
@@ -115,6 +118,9 @@ def convert_to_fcg(state: State, config: RunnableConfig) -> State:
         # Relabel the graph nodes to stable integer IDs for DGL conversion
         relabeled_graph = nx.relabel_nodes(graph, stable_name_to_idx_map)
         
+        # Extract edges with the new stable integer IDs
+        edges_with_stable_ids = list(relabeled_graph.edges())
+        
         # Convert to DGL graph, preserving node attributes
         dgl_graph = dgl.from_networkx(relabeled_graph, node_attrs=['features', 'featuresH', 'contract_index'])
         
@@ -130,13 +136,16 @@ def convert_to_fcg(state: State, config: RunnableConfig) -> State:
             json.dump(mapping_data, f, indent=4, ensure_ascii=False)
         print(f"Saved mapping: {json_path}")
         
+        # Update state with the paths to the created files and the extracted edges
         state["mapping_file_path"] = str(json_path)
         state["fcg_file_path"] = str(fcg_file_path)
+        state["fcg_edges"] = edges_with_stable_ids
     
     except Exception as e:
         print(f"Error processing {sol_file_src}: {e}")
         traceback.print_exc()
         state["fcg_file_path"] = f"Error in processing file: {e}"
         state["mapping_file_path"] = f"Error in processing file: {e}"
+        state["fcg_edges"] = [] # Set edges to empty list on error
     
     return state

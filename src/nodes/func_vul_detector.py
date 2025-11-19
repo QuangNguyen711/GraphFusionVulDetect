@@ -68,14 +68,12 @@ def detect_vulnerability_func(state: State, config: RunnableConfig) -> State:
             node_name = index_to_name_map.get(i, f"Node_{i}") # Use a fallback name if not found
             confidence = prob[pred].item()
 
-            # A prediction of 1 indicates a vulnerability
-            if pred.item() == 1:
-                results.append({
-                    "function_name": node_name,
-                    "function_code": mapping_data.get("code", {}).get(node_name, ""),
-                    "prediction": pred.item(),
-                    "confidence": f"{confidence:.2%}"
-                })
+            results.append({
+                "function_name": node_name,
+                "function_code": mapping_data.get("code", {}).get(node_name, ""),
+                "prediction": pred.item(),
+                "confidence": f"{confidence:.2%}"
+            })
             
             # print(f"Function: {node_name}, Prediction: {pred.item()}, Confidence: {confidence:.2%}")
     else:
@@ -83,13 +81,12 @@ def detect_vulnerability_func(state: State, config: RunnableConfig) -> State:
         # Create a basic result list even if mapping is missing
         for i, (pred, prob) in enumerate(zip(predictions, probabilities)):
             confidence = prob[pred].item()
-            if pred.item() == 1:
-                results.append({
-                    "function_name": f"Node_{i}",
-                    "function_code": "",
-                    "prediction": pred.item(),
-                    "confidence": f"{confidence:.2%}"
-                })
+            results.append({
+                "function_name": f"Node_{i}",
+                "function_code": "",
+                "prediction": pred.item(),
+                "confidence": f"{confidence:.2%}"
+            })
 
     state["func_vulnerability_predictions"] = results
     return state
