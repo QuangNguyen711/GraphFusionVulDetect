@@ -177,3 +177,5 @@ pyrightconfig.json
 
 ge-sc-artifacts
 output
+
+!web_react/src/lib
