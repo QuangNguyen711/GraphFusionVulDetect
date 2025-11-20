@@ -37,7 +37,8 @@ class NodeClassifierGNN(nn.Module):
         super(NodeClassifierGNN, self).__init__()
         self.mtype = mtype
         self.hfeats = hfeats
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        # self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cpu")
 
         # Define convolutional layers
         self.conv_layers = nn.ModuleList()

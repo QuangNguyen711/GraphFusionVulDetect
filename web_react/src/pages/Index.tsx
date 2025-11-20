@@ -28,15 +28,20 @@ const Index = () => {
       return;
     }
 
-    // Store in sessionStorage
+    // Store in sessionStorage, including the actual file object
     sessionStorage.setItem(
       "contractAnalysis",
       JSON.stringify({
         projectName: projectName.trim(),
         fileName: selectedFile.file.name,
-        file: selectedFile.content,
+        file: selectedFile.content, // Keep content for backward compatibility
+        fileSize: selectedFile.file.size,
+        lastModified: selectedFile.file.lastModified,
       })
     );
+
+    // Store the actual file in a separate key since File objects don't serialize well
+    sessionStorage.setItem("contractFile", selectedFile.content);
 
     toast.success("Starting analysis...");
     navigate("/analysis");

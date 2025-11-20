@@ -22,7 +22,9 @@ const Analysis = () => {
 
   useEffect(() => {
     const storedData = sessionStorage.getItem("contractAnalysis");
-    if (!storedData) {
+    const fileContent = sessionStorage.getItem("contractFile");
+    
+    if (!storedData || !fileContent) {
       navigate("/");
       return;
     }
@@ -34,22 +36,25 @@ const Analysis = () => {
       fileName: data.fileName,
     });
 
-    startAnalysis(data.file, data.projectName);
+    startAnalysis(fileContent, data.projectName, data.fileName);
   }, [navigate]);
 
-  const startAnalysis = async (fileContent: string, projectName: string) => {
+  const startAnalysis = async (fileContent: string, projectName: string, fileName: string) => {
     setIsStreaming(true);
     
     try {
-      const response = await fetch("/analyze", {
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      
+      // Create a Blob from the file content with the correct MIME type
+      const blob = new Blob([fileContent], { type: 'text/plain' });
+      
+      // Append the file to FormData
+      formData.append('file', blob, fileName);
+
+      const response = await fetch("/api/v1/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          file: fileContent,
-          projectName: projectName,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {

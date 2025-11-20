@@ -121,7 +121,8 @@ class GraphNN(nn.Module):
         self.mtype = mtype
         self.gptype = gptype
         self.hfeats = hfeats
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        # self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device("cpu")
 
         if mtype[0] == "GIN":          
           self.conv1 = get_convolution_layer(input_dimension=infeats, output_dimension=hfeats[0],
