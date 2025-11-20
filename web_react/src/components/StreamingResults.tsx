@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle, Info, XCircle, FileText, Shield, Search } from "lucide-react";
 import { Accordion, AccordionItem, AccordionContent, AccordionTrigger } from "@/components/ui/accordion";
+import { FunctionGraphVisualization } from "./FunctionGraphVisualization";
 
 interface StreamingResultsProps {
   results: any[];
@@ -128,6 +129,14 @@ export const StreamingResults = ({ results, isStreaming }: StreamingResultsProps
                       </div>
                     )}
                     
+                    {/* Function Graph Visualization */}
+                    {result.output.fcg_edges && result.output.func_vulnerability_predictions && (
+                      <FunctionGraphVisualization 
+                        fcgEdges={result.output.fcg_edges}
+                        funcVulnerabilityPredictions={result.output.func_vulnerability_predictions}
+                      />
+                    )}
+                    
                     {result.output.func_vulnerability_predictions && (
                       <div>
                         <p className="text-sm font-medium mb-3">Function Vulnerability Predictions:</p>
@@ -152,7 +161,7 @@ export const StreamingResults = ({ results, isStreaming }: StreamingResultsProps
                               <AccordionContent className="px-4 pb-4">
                                 <div className="bg-muted/30 rounded-lg p-3">
                                   <p className="text-xs font-medium mb-2">Function Code:</p>
-                                  <pre className="text-xs text-foreground whitespace-pre-wrap font-mono overflow-x-auto">
+                                  <pre className="text-xs text-white dark:text-white whitespace-pre-wrap font-mono overflow-x-auto">
                                     {func.function_code}
                                   </pre>
                                 </div>
