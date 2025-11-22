@@ -1,0 +1,28 @@
+# Docker Compose override file
+# Copy this file to docker-compose.override.yml and customize as needed
+# This file is automatically loaded by docker-compose
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      # Add your custom environment variables here
+    
+  frontend:
+    environment:
+      # Add your custom environment variables here
+      - VITE_DEBUG=true
+    
+  redis:
+    # Uncomment to expose Redis on different port
+    # ports:
+    #   - "6380:6379"
+    
+    # Uncomment for custom Redis configuration
+    # command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    
+    # Uncomment for Redis password in development
+    # command: redis-server --requirepass your_dev_password

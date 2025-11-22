@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # Backend service - GraphFusion API
+  backend:
+    build:
+      context: .
+      dockerfile: docker/be.dockerfile
+    container_name: gfd-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/graphfusion/data
+      - ./datasets:/graphfusion/datasets
+      - ./storage:/graphfusion/storage
+    environment:
+      - PYTHONPATH=/graphfusion
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - REDIS_URL=${REDIS_URL}
+      - MONGODB_URL=${MONGODB_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - BASE_URL=${BASE_URL}
+      - MODEL_NAME=${MODEL_NAME}
+      - EMBEDDING_MODEL_PATH=${EMBEDDING_MODEL_PATH}
+      - GRAPH_VUL_MODEL_PATH=${GRAPH_VUL_MODEL_PATH}
+      - NODE_VUL_MODEL_PATH=${NODE_VUL_MODEL_PATH}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    networks:
+      - gfd-network
+    depends_on:
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service - React Web App
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/fe.dockerfile
+    container_name: gfd-frontend
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=${ENVIRONMENT:-production}
+      - VITE_API_URL=${BACKEND_URL:-http://backend:8000}
+      - VITE_FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
+    networks:
+      - gfd-network
+    depends_on:
+      - backend
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis service - Caching and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: gfd-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # MongoDB service - Database
+  mongodb:
+    image: mongo:7
+    container_name: gfd-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD:-password}
+      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE:-graphfusion}
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MinIO service - Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: gfd-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin123}
+    command: server /data --console-address ":9001"
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  gfd-network:
+    driver: bridge
+    name: graphfusion-network
+
+volumes:
+  data:
+    driver: local
+  storage:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  minio_data:
+    driver: local

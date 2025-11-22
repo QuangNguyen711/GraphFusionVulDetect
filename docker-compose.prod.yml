@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+  # Backend service - GraphFusion API (Production)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/be.prod.dockerfile
+    container_name: gfd-backend-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/graphfusion/data:ro
+      - ./datasets:/graphfusion/datasets:ro
+      - ./storage:/graphfusion/storage
+    environment:
+      - PYTHONPATH=/graphfusion
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - REDIS_URL=${REDIS_URL}
+      - MONGODB_URL=${MONGODB_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-warn}
+    networks:
+      - gfd-network
+    depends_on:
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service - React Web App (Production with Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/fe.prod.dockerfile
+    container_name: gfd-frontend-prod
+    ports:
+      - "8080:8080"
+    networks:
+      - gfd-network
+    depends_on:
+      - backend
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis service - Caching and Session Store (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: gfd-redis-prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # MongoDB service - Database (Production)
+  mongodb:
+    image: mongo:7
+    container_name: gfd-mongodb-prod
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./docker/mongod.conf:/etc/mongod.conf:ro
+      - ./docker/mongo-init-prod.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=production_password
+      - MONGO_INITDB_DATABASE=graphfusion
+    command: ["mongod", "--config", "/etc/mongod.conf"]
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # MinIO service - Object Storage (Production)
+  minio:
+    image: minio/minio:latest
+    container_name: gfd-minio-prod
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+      - ./docker/minio-policy.json:/tmp/policy.json:ro
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minio_production_secret_key
+      - MINIO_SERVER_URL=https://your-domain.com:9000
+      - MINIO_BROWSER_REDIRECT_URL=https://your-domain.com:9001
+    command: server /data --console-address ":9001"
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  gfd-network:
+    driver: bridge
+    name: graphfusion-network-prod
+
+volumes:
+  data:
+    driver: local
+  storage:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  minio_data:
+    driver: local

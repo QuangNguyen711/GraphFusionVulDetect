@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  # Backend service - GraphFusion API (Development)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/be.dockerfile
+    container_name: gfd-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/graphfusion/src
+      - ./core:/graphfusion/core
+      - ./data:/graphfusion/data
+      - ./datasets:/graphfusion/datasets
+      - ./storage:/graphfusion/storage
+      - ./ge-sc-artifacts:/graphfusion/ge-sc-artifacts
+      - ./pyproject.toml:/graphfusion/pyproject.toml
+      - ./uv.lock:/graphfusion/uv.lock
+    environment:
+      - PYTHONPATH=/graphfusion
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - RELOAD=true
+      - REDIS_URL=${REDIS_URL}
+      - MONGODB_URL=${MONGODB_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - BASE_URL=${BASE_URL}
+      - MODEL_NAME=${MODEL_NAME}
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+    networks:
+      - gfd-network
+    depends_on:
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+    command: ["uv", "run", "--reload", "src.main"]
+
+  # Frontend service - React Web App (Development)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/fe.dockerfile
+    container_name: gfd-frontend-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./web_react/src:/app/src
+      - ./web_react/public:/app/public
+      - ./web_react/package.json:/app/package.json
+      - ./web_react/vite.config.ts:/app/vite.config.ts
+      - ./web_react/tailwind.config.ts:/app/tailwind.config.ts
+      - ./web_react/tsconfig.json:/app/tsconfig.json
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://backend:8000
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - gfd-network
+    depends_on:
+      - backend
+      - redis
+      - mongodb
+      - minio
+    restart: unless-stopped
+
+  # Redis service - Caching and Session Store (Development)
+  redis:
+    image: redis:7-alpine
+    container_name: gfd-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # MongoDB service - Database (Development)
+  mongodb:
+    image: mongo:7
+    container_name: gfd-mongodb-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=graphfusion
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MinIO service - Object Storage (Development)
+  minio:
+    image: minio/minio:latest
+    container_name: gfd-minio-dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    command: server /data --console-address ":9001"
+    networks:
+      - gfd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  gfd-network:
+    driver: bridge
+    name: graphfusion-network-dev
+
+volumes:
+  data:
+    driver: local
+  storage:
+    driver: local
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  minio_data:
+    driver: local
