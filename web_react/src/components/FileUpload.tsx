@@ -186,41 +186,6 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
         />
       </Card>
 
-      {selectedFile && !uploadedFileInfo && (
-        <div className="flex gap-3">
-          <Button
-            onClick={handleUploadOnly}
-            disabled={isUploading}
-            variant="outline"
-            className="flex-1"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              'Upload File'
-            )}
-          </Button>
-          
-          <Button
-            onClick={handleUploadAndAnalyze}
-            disabled={isUploading}
-            className="flex-1 gradient-primary"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              'Upload & Analyze'
-            )}
-          </Button>
-        </div>
-      )}
-
       {isUploading && (
         <Card className="p-4">
           <div className="space-y-2">

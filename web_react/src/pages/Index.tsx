@@ -6,19 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
 import Header from "@/components/Header";
-import { Shield, Sparkles, Zap } from "lucide-react";
+import { Shield, Sparkles, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { projectService } from "@/services/project";
 
 const Index = () => {
   const navigate = useNavigate();
   const [projectName, setProjectName] = useState("");
   const [selectedFile, setSelectedFile] = useState<{ file: File; content: string } | null>(null);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   const handleFileSelect = (file: File, content: string) => {
     setSelectedFile({ file, content });
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!projectName.trim()) {
       toast.error("Please enter a project name");
       return;
@@ -29,23 +31,42 @@ const Index = () => {
       return;
     }
 
-    // Store in sessionStorage, including the actual file object
-    sessionStorage.setItem(
-      "contractAnalysis",
-      JSON.stringify({
-        projectName: projectName.trim(),
-        fileName: selectedFile.file.name,
-        file: selectedFile.content, // Keep content for backward compatibility
-        fileSize: selectedFile.file.size,
-        lastModified: selectedFile.file.lastModified,
-      })
-    );
+    setIsCreatingProject(true);
+    
+    try {
+      // First create the project in the backend
+      const project = await projectService.createProject({
+        name: projectName.trim(),
+        description: `Analysis project for ${selectedFile.file.name}`
+      });
 
-    // Store the actual file in a separate key since File objects don't serialize well
-    sessionStorage.setItem("contractFile", selectedFile.content);
+      // Store project and file information
+      sessionStorage.setItem(
+        "contractAnalysis",
+        JSON.stringify({
+          projectId: project.id,
+          projectName: project.name,
+          fileName: selectedFile.file.name,
+          fileSize: selectedFile.file.size,
+          lastModified: selectedFile.file.lastModified,
+        })
+      );
 
-    toast.success("Starting analysis...");
-    navigate("/analysis");
+      // Store the actual file content
+      sessionStorage.setItem("contractFile", selectedFile.content);
+
+      toast.success("Project created successfully!");
+      navigate("/analysis");
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : "Failed to create project. Please try again."
+      );
+    } finally {
+      setIsCreatingProject(false);
+    }
   };
 
   return (
@@ -112,9 +133,16 @@ const Index = () => {
             onClick={handleAnalyze}
             size="lg"
             className="w-full h-14 text-lg font-semibold gradient-primary shadow-glow hover:shadow-glow transition-smooth"
-            disabled={!projectName.trim() || !selectedFile}
+            disabled={!projectName.trim() || !selectedFile || isCreatingProject}
           >
-            Start Analysis
+            {isCreatingProject ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Creating Project...
+              </>
+            ) : (
+              "Start Analysis"
+            )}
           </Button>
         </Card>
 

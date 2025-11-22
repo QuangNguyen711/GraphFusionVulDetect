@@ -6,11 +6,15 @@ import Header from "@/components/Header";
 import { ArrowLeft, Activity, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { StreamingResults } from "@/components/StreamingResults";
 import { ContractVisualization } from "@/components/ContractVisualization";
+import { projectService } from "@/services/project";
+import { toast } from "sonner";
 
 interface AnalysisData {
   status: "pending" | "analyzing" | "complete" | "error";
+  projectId?: string;
   projectName: string;
   fileName: string;
+  sessionId?: string;
   results?: any;
   error?: string;
 }
@@ -20,6 +24,18 @@ const Analysis = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [streamingResults, setStreamingResults] = useState<any[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+
+  const handleBack = () => {
+    const storedData = sessionStorage.getItem("contractAnalysis");
+    if (storedData) {
+      const data = JSON.parse(storedData);
+      if (data.isExistingProject && data.projectId) {
+        navigate(`/projects/${data.projectId}`);
+        return;
+      }
+    }
+    navigate("/");
+  };
 
   useEffect(() => {
     const storedData = sessionStorage.getItem("contractAnalysis");
@@ -31,44 +47,41 @@ const Analysis = () => {
     }
 
     const data = JSON.parse(storedData);
+    
+    // Check if we have project information from the new flow
+    if (!data.projectId) {
+      toast.error("Project information missing. Please start from the beginning.");
+      navigate("/");
+      return;
+    }
+
     setAnalysisData({
       status: "analyzing",
+      projectId: data.projectId,
       projectName: data.projectName,
       fileName: data.fileName,
     });
 
-    startAnalysis(fileContent, data.projectName, data.fileName);
+    startAnalysis(fileContent, data.projectId, data.fileName);
   }, [navigate]);
 
-  const startAnalysis = async (fileContent: string, projectName: string, fileName: string) => {
+  const startAnalysis = async (fileContent: string, projectId: string, fileName: string) => {
     setIsStreaming(true);
     
     try {
-      // Create a FormData object to send the file
-      const formData = new FormData();
-      
-      // Create a Blob from the file content with the correct MIME type
+      // Create a File object from the content
       const blob = new Blob([fileContent], { type: 'text/plain' });
+      const file = new File([blob], fileName, { type: 'text/plain' });
+
+      // Use project service to start analysis with project association
+      const { sessionId, stream } = await projectService.analyzeWithProject(file, projectId);
       
-      // Append the file to FormData
-      formData.append('file', blob, fileName);
+      // Update analysis data with session ID
+      setAnalysisData(prev => prev ? { ...prev, sessionId } : null);
 
-      const response = await fetch("/api/v1/analyze", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
+      // Process the stream
+      const reader = stream.getReader();
       const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("No response body");
-      }
-
       let buffer = "";
 
       while (true) {
@@ -77,6 +90,7 @@ const Analysis = () => {
         if (done) {
           setIsStreaming(false);
           setAnalysisData(prev => prev ? { ...prev, status: "complete" } : null);
+          toast.success("Analysis completed successfully!");
           break;
         }
 
@@ -89,8 +103,16 @@ const Analysis = () => {
             try {
               const parsed = JSON.parse(line);
               setStreamingResults(prev => [...prev, parsed]);
-            } catch (e) {
-              console.error("Failed to parse line:", line, e);
+              
+              // Check for errors in the stream
+              if (parsed.node === "error") {
+                throw new Error(parsed.output?.error || "Analysis failed");
+              }
+            } catch (parseError) {
+              console.error("Failed to parse line:", line, parseError);
+              if (parseError instanceof Error && parseError.message.includes("Analysis failed")) {
+                throw parseError;
+              }
             }
           }
         }
@@ -98,11 +120,15 @@ const Analysis = () => {
     } catch (error) {
       console.error("Analysis error:", error);
       setIsStreaming(false);
+      const errorMessage = error instanceof Error ? error.message : "Analysis failed";
+      
       setAnalysisData(prev => prev ? {
         ...prev,
         status: "error",
-        error: error instanceof Error ? error.message : "Analysis failed"
+        error: errorMessage
       } : null);
+      
+      toast.error(`Analysis failed: ${errorMessage}`);
     }
   };
 
@@ -134,11 +160,18 @@ const Analysis = () => {
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
+            onClick={handleBack}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Upload
+            Back to {(() => {
+              const storedData = sessionStorage.getItem("contractAnalysis");
+              if (storedData) {
+                const data = JSON.parse(storedData);
+                if (data.isExistingProject) return "Project";
+              }
+              return "Upload";
+            })()}
           </Button>
           
           <div className="flex items-center gap-3">

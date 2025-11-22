@@ -26,19 +26,19 @@ const Header = () => {
             </div>
           </Link>
 
-          {/* Navigation links (có thể thêm sau) */}
+          {/* Navigation links */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link 
               to="/" 
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Trang chủ
+              New Analysis
             </Link>
             <Link 
-              to="/analysis" 
+              to="/projects" 
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Phân tích
+              Projects
             </Link>
           </nav>
 

@@ -42,6 +42,82 @@ class UserInDB(BaseModel):
     created_at: datetime
     last_login: Optional[datetime] = None
 
+# Project related schemas
+class ProjectStatus(str, Enum):
+    CREATED = "created"
+    ANALYZING = "analyzing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class ProjectCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Project name")
+    description: Optional[str] = Field(default=None, max_length=500, description="Project description")
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100, description="Project name")
+    description: Optional[str] = Field(default=None, max_length=500, description="Project description")
+    status: Optional[ProjectStatus] = Field(default=None, description="Project status")
+
+class ProjectFile(BaseModel):
+    filename: str = Field(..., description="Name of the uploaded file")
+    file_size: int = Field(..., description="Size of the file in bytes")
+    file_path: str = Field(..., description="Path where the file is stored")
+    file_hash: str = Field(..., description="Hash of the file content")
+    uploaded_at: datetime = Field(default_factory=datetime.now, description="Upload timestamp")
+
+class Project(BaseModel):
+    id: Optional[str] = Field(default=None, alias="_id", description="Unique project identifier")
+    name: str = Field(..., description="Project name")
+    description: Optional[str] = Field(default=None, description="Project description")
+    user_id: str = Field(..., description="ID of the user who created the project")
+    status: ProjectStatus = Field(default=ProjectStatus.CREATED, description="Project status")
+    files: List[ProjectFile] = Field(default_factory=list, description="Files associated with the project")
+    analysis_count: int = Field(default=0, description="Number of analyses performed")
+    created_at: datetime = Field(default_factory=datetime.now, description="Project creation timestamp")
+    updated_at: datetime = Field(default_factory=datetime.now, description="Project last update timestamp")
+
+class ProjectResponse(BaseModel):
+    id: str = Field(..., description="Unique project identifier")
+    name: str = Field(..., description="Project name")
+    description: Optional[str] = Field(default=None, description="Project description")
+    status: ProjectStatus = Field(..., description="Project status")
+    files_count: int = Field(..., description="Number of files in the project")
+    analysis_count: int = Field(..., description="Number of analyses performed")
+    created_at: datetime = Field(..., description="Project creation timestamp")
+    updated_at: datetime = Field(..., description="Project last update timestamp")
+
+# Analysis session related schemas
+class AnalysisSessionStatus(str, Enum):
+    CREATED = "created"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class AnalysisSessionCreate(BaseModel):
+    project_id: str = Field(..., description="ID of the project this analysis belongs to")
+    file_path: str = Field(..., description="Path to the file being analyzed")
+    filename: str = Field(..., description="Name of the file being analyzed")
+
+class AnalysisStep(BaseModel):
+    step_name: str = Field(..., description="Name of the analysis step")
+    status: str = Field(..., description="Status of the step (started, completed, failed)")
+    result_data: Dict[str, Any] = Field(default_factory=dict, description="Result data from the step")
+    started_at: datetime = Field(default_factory=datetime.now, description="Step start timestamp")
+    completed_at: Optional[datetime] = Field(default=None, description="Step completion timestamp")
+    error_message: Optional[str] = Field(default=None, description="Error message if step failed")
+
+class AnalysisSession(BaseModel):
+    id: Optional[str] = Field(default=None, alias="_id", description="Unique session identifier")
+    project_id: str = Field(..., description="ID of the project this analysis belongs to")
+    user_id: str = Field(..., description="ID of the user who initiated the analysis")
+    file_path: str = Field(..., description="Path to the file being analyzed")
+    filename: str = Field(..., description="Name of the file being analyzed")
+    status: AnalysisSessionStatus = Field(default=AnalysisSessionStatus.CREATED, description="Session status")
+    steps: List[AnalysisStep] = Field(default_factory=list, description="Analysis steps and their results")
+    started_at: datetime = Field(default_factory=datetime.now, description="Analysis start timestamp")
+    completed_at: Optional[datetime] = Field(default=None, description="Analysis completion timestamp")
+    error_message: Optional[str] = Field(default=None, description="Error message if analysis failed")
+
 # Analysis related schemas
 class VulnerabilityType(str, Enum):
     REENTRANCY = "reentrancy"
