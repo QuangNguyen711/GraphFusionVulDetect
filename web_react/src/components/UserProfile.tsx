@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +12,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Settings, LogOut, Shield, Clock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import UserProfileDialog from './UserProfileDialog';
 
 const UserProfile = () => {
   const { user, logout } = useAuth();
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
 
   if (!user) return null;
 
@@ -109,7 +111,10 @@ const UserProfile = () => {
         
         <DropdownMenuSeparator />
         
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem 
+          className="cursor-pointer"
+          onClick={() => setShowProfileDialog(true)}
+        >
           <User className="mr-2 h-4 w-4" />
           <span>Thông tin cá nhân</span>
         </DropdownMenuItem>
@@ -134,6 +139,11 @@ const UserProfile = () => {
           <span>Đăng xuất</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <UserProfileDialog 
+        open={showProfileDialog} 
+        onOpenChange={setShowProfileDialog}
+      />
     </DropdownMenu>
   );
 };

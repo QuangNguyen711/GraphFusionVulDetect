@@ -15,7 +15,8 @@ from ..schema.entity import (
     StreamingNodeOutput, AnalysisSession, AnalysisSessionCreate,
     AnalysisSessionStatus, AnalysisStep, ProjectFile, UserInDB
 )
-from ..database import get_analysis_sessions_collection, get_projects_collection
+from ...resource.database import get_analysis_sessions_collection, get_projects_collection
+from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
 from .authentication import get_current_user
 
 router = APIRouter()
@@ -100,7 +101,7 @@ async def analyze_contract(
         "file_hash": file_hash,
         "status": AnalysisSessionStatus.PROCESSING,
         "steps": [],
-        "started_at": datetime.now(timezone.utc),
+        "started_at": now_vietnam(),
         "completed_at": None,
         "error_message": None
     }
@@ -116,7 +117,7 @@ async def analyze_contract(
             file_size=len(file_content),
             file_path=file_path,
             file_hash=file_hash,
-            uploaded_at=datetime.now(timezone.utc)
+            uploaded_at=now_vietnam()
         )
         
         # Check if file already exists in project
@@ -132,7 +133,7 @@ async def analyze_contract(
                     "$push": {"files": project_file.dict()},
                     "$inc": {"analysis_count": 1},
                     "$set": {
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": now_vietnam(),
                         "status": "analyzing"
                     }
                 }
@@ -143,7 +144,7 @@ async def analyze_contract(
                 {
                     "$inc": {"analysis_count": 1},
                     "$set": {
-                        "updated_at": datetime.now(timezone.utc),
+                        "updated_at": now_vietnam(),
                         "status": "analyzing"
                     }
                 }
@@ -165,8 +166,8 @@ async def analyze_contract(
                         step_name=result_data.get("node", "unknown"),
                         status="completed",
                         result_data=result_data.get("output", {}),
-                        started_at=datetime.now(timezone.utc),
-                        completed_at=datetime.now(timezone.utc)
+                        started_at=now_vietnam(),
+                        completed_at=now_vietnam()
                     )
                     
                     await sessions_collection.update_one(
@@ -187,7 +188,7 @@ async def analyze_contract(
                 {
                     "$set": {
                         "status": AnalysisSessionStatus.COMPLETED,
-                        "completed_at": datetime.now(timezone.utc)
+                        "completed_at": now_vietnam()
                     }
                 }
             )
@@ -199,7 +200,7 @@ async def analyze_contract(
                     {
                         "$set": {
                             "status": "completed",
-                            "updated_at": datetime.now(timezone.utc)
+                            "updated_at": now_vietnam()
                         }
                     }
                 )
@@ -213,7 +214,7 @@ async def analyze_contract(
                 {
                     "$set": {
                         "status": AnalysisSessionStatus.FAILED,
-                        "completed_at": datetime.now(timezone.utc),
+                        "completed_at": now_vietnam(),
                         "error_message": str(e)
                     }
                 }
@@ -226,7 +227,7 @@ async def analyze_contract(
                     {
                         "$set": {
                             "status": "failed",
-                            "updated_at": datetime.now(timezone.utc)
+                            "updated_at": now_vietnam()
                         }
                     }
                 )

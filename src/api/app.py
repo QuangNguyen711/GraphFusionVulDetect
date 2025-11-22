@@ -11,7 +11,7 @@ from src.model.GraphClasifier import GraphNN
 from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
 from .router import create_router
-from .database import db_manager
+from ..resource.database import db_manager
 
 # Load environment variables
 dotenv.load_dotenv()

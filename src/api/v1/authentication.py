@@ -10,7 +10,8 @@ from bson import ObjectId
 import dotenv
 
 from ..schema.entity import UserRegister, UserLogin, Token, UserProfile, UserInDB
-from ..database import get_users_collection
+from ...resource.database import get_users_collection
+from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -56,9 +57,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = now_vietnam() + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = now_vietnam() + timedelta(minutes=15)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
@@ -139,7 +140,7 @@ async def register_user(user_data: UserRegister):
         "full_name": user_data.full_name,
         "hashed_password": hashed_password,
         "is_active": True,
-        "created_at": datetime.now(timezone.utc),
+        "created_at": now_vietnam(),
         "last_login": None
     }
     
@@ -173,7 +174,7 @@ async def login_for_access_token(user_data: UserLogin):
     # Update last login timestamp
     await users_collection.update_one(
         {"_id": ObjectId(user.id)},
-        {"$set": {"last_login": datetime.now(timezone.utc)}}
+        {"$set": {"last_login": now_vietnam()}}
     )
     
     # Create access token

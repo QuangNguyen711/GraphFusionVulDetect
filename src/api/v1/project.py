@@ -9,7 +9,8 @@ from ..schema.entity import (
     ProjectCreate, ProjectUpdate, Project, ProjectResponse, 
     ProjectFile, ProjectStatus, UserInDB, AnalysisSession
 )
-from ..database import get_projects_collection, get_analysis_sessions_collection
+from ...resource.database import get_projects_collection, get_analysis_sessions_collection
+from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
 from .authentication import get_current_user
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -52,8 +53,8 @@ async def create_project(
         "status": ProjectStatus.CREATED,
         "files": [],
         "analysis_count": 0,
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc)
+        "created_at": now_vietnam(),
+        "updated_at": now_vietnam()
     }
     
     # Insert project into database
@@ -165,7 +166,7 @@ async def update_project(
         )
     
     # Build update data
-    update_data = {"updated_at": datetime.now(timezone.utc)}
+    update_data = {"updated_at": now_vietnam()}
     
     if project_data.name is not None:
         # Check for name conflicts
@@ -273,7 +274,7 @@ async def add_file_to_project(
         file_size=len(file_content),
         file_path="",  # Will be set when file is saved during analysis
         file_hash=file_hash,
-        uploaded_at=datetime.now(timezone.utc)
+        uploaded_at=now_vietnam()
     )
     
     # Update project with new file
@@ -281,7 +282,7 @@ async def add_file_to_project(
         {"_id": ObjectId(project_id)},
         {
             "$push": {"files": project_file.dict()},
-            "$set": {"updated_at": datetime.now(timezone.utc)}
+            "$set": {"updated_at": now_vietnam()}
         }
     )
     

@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field, EmailStr
 from enum import Enum
 from datetime import datetime
+from ...utils.timezone import now_utc, now_vietnam
 
 # Authentication schemas
 class UserRegister(BaseModel):
@@ -63,7 +64,7 @@ class ProjectFile(BaseModel):
     file_size: int = Field(..., description="Size of the file in bytes")
     file_path: str = Field(..., description="Path where the file is stored")
     file_hash: str = Field(..., description="Hash of the file content")
-    uploaded_at: datetime = Field(default_factory=datetime.now, description="Upload timestamp")
+    uploaded_at: datetime = Field(default_factory=now_utc, description="Upload timestamp")
 
 class Project(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id", description="Unique project identifier")
@@ -73,8 +74,8 @@ class Project(BaseModel):
     status: ProjectStatus = Field(default=ProjectStatus.CREATED, description="Project status")
     files: List[ProjectFile] = Field(default_factory=list, description="Files associated with the project")
     analysis_count: int = Field(default=0, description="Number of analyses performed")
-    created_at: datetime = Field(default_factory=datetime.now, description="Project creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.now, description="Project last update timestamp")
+    created_at: datetime = Field(default_factory=now_utc, description="Project creation timestamp")
+    updated_at: datetime = Field(default_factory=now_utc, description="Project last update timestamp")
 
 class ProjectResponse(BaseModel):
     id: str = Field(..., description="Unique project identifier")
@@ -102,7 +103,7 @@ class AnalysisStep(BaseModel):
     step_name: str = Field(..., description="Name of the analysis step")
     status: str = Field(..., description="Status of the step (started, completed, failed)")
     result_data: Dict[str, Any] = Field(default_factory=dict, description="Result data from the step")
-    started_at: datetime = Field(default_factory=datetime.now, description="Step start timestamp")
+    started_at: datetime = Field(default_factory=now_utc, description="Step start timestamp")
     completed_at: Optional[datetime] = Field(default=None, description="Step completion timestamp")
     error_message: Optional[str] = Field(default=None, description="Error message if step failed")
 
@@ -114,7 +115,7 @@ class AnalysisSession(BaseModel):
     filename: str = Field(..., description="Name of the file being analyzed")
     status: AnalysisSessionStatus = Field(default=AnalysisSessionStatus.CREATED, description="Session status")
     steps: List[AnalysisStep] = Field(default_factory=list, description="Analysis steps and their results")
-    started_at: datetime = Field(default_factory=datetime.now, description="Analysis start timestamp")
+    started_at: datetime = Field(default_factory=now_utc, description="Analysis start timestamp")
     completed_at: Optional[datetime] = Field(default=None, description="Analysis completion timestamp")
     error_message: Optional[str] = Field(default=None, description="Error message if analysis failed")
 
@@ -201,7 +202,7 @@ class AnalysisResponse(BaseModel):
     analysis_id: str = Field(..., description="Unique identifier for this analysis")
     file_name: str = Field(..., description="Name of the analyzed file")
     file_size: int = Field(..., description="Size of the analyzed file in bytes")
-    analysis_timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp when analysis was performed")
+    analysis_timestamp: datetime = Field(default_factory=now_utc, description="Timestamp when analysis was performed")
     vulnerabilities: List[VulnerabilityResult] = Field(default_factory=list, description="List of detected vulnerabilities")
     graph_analysis: Optional[GraphAnalysisResult] = Field(default=None, description="Graph analysis results")
     processing_time: float = Field(..., description="Time taken to process the file in seconds")
@@ -218,5 +219,5 @@ class FileInfo(BaseModel):
     filename: str = Field(..., description="Name of the file")
     file_size: int = Field(..., description="Size of the file in bytes")
     file_type: str = Field(..., description="Type/extension of the file")
-    upload_timestamp: datetime = Field(default_factory=datetime.now, description="When the file was uploaded")
+    upload_timestamp: datetime = Field(default_factory=now_utc, description="When the file was uploaded")
     saved_path: str = Field(..., description="Path where the file is saved on the server")
