@@ -11,6 +11,7 @@ from src.model.GraphClasifier import GraphNN
 from src.model.NodeDetector import NodeClassifierGNN
 from src.graph.builder import build_graph
 from .router import create_router
+from .database import db_manager
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -131,9 +132,17 @@ def create_app():
     
     # Load models on startup
     async def startup():
+        # Connect to database
+        await db_manager.connect()
+        # Load models
         load_models()
     
+    async def shutdown():
+        # Disconnect from database
+        await db_manager.disconnect()
+    
     app.add_event_handler("startup", startup)
+    app.add_event_handler("shutdown", shutdown)
     
     # Include routers
     app.include_router(create_router())

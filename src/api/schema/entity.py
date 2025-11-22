@@ -1,14 +1,46 @@
 from typing import Optional, List, Dict, Any, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from enum import Enum
 from datetime import datetime
 
+# Authentication schemas
+class UserRegister(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50, description="Username for the account")
+    email: EmailStr = Field(..., description="Email address for the account")
+    password: str = Field(..., min_length=6, description="Password for the account")
+    full_name: Optional[str] = Field(default=None, max_length=100, description="Full name of the user")
+
+class UserLogin(BaseModel):
+    username: str = Field(..., description="Username or email")
+    password: str = Field(..., description="Password")
+
+class Token(BaseModel):
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: int = Field(..., description="Token expiration time in seconds")
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    user_id: Optional[str] = None
+
 class UserProfile(BaseModel):
-    user_id: Optional[int] = Field(default=None, description="The unique identifier of the user")
+    user_id: Optional[str] = Field(default=None, description="The unique identifier of the user")
     username: Optional[str] = Field(default=None, description="The user's login name")
     email: Optional[str] = Field(default=None, description="The user's email address")
     full_name: Optional[str] = Field(default=None, description="The user's full name")
     bio: Optional[str] = Field(default=None, description="A short bio of the user")
+    created_at: Optional[datetime] = Field(default=None, description="Account creation timestamp")
+    last_login: Optional[datetime] = Field(default=None, description="Last login timestamp")
+
+class UserInDB(BaseModel):
+    id: str = Field(..., alias="_id")
+    username: str
+    email: str
+    full_name: Optional[str] = None
+    hashed_password: str
+    is_active: bool = True
+    created_at: datetime
+    last_login: Optional[datetime] = None
 
 # Analysis related schemas
 class VulnerabilityType(str, Enum):
