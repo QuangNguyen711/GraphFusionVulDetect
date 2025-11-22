@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
+import Header from "@/components/Header";
 import { Shield, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,6 +50,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
+      
       {/* Hero Section */}
       <div className="gradient-hero border-b border-border">
         <div className="max-w-5xl mx-auto px-6 py-16">

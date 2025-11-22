@@ -153,6 +153,34 @@ services:
         reservations:
           memory: 256M
 
+  # MongoDB Express service - MongoDB Web Interface (Production - Optional, use with caution)
+  # Uncomment only if you need database management in production
+  # mongo-express:
+  #   image: mongo-express:latest
+  #   container_name: gfd-mongo-express-prod
+  #   ports:
+  #     - "127.0.0.1:${MONGO_EXPRESS_PORT:-8081}:8081"  # Only bind to localhost for security
+  #   environment:
+  #     - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGODB_USERNAME:-admin}
+  #     - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD:-production_password}
+  #     - ME_CONFIG_MONGODB_URL=mongodb://${MONGODB_USERNAME:-admin}:${MONGODB_PASSWORD:-production_password}@mongodb:27017/
+  #     - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USERNAME:-production_admin}
+  #     - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD:-secure_production_password_2024}
+  #     - ME_CONFIG_SITE_BASEURL=/
+  #   networks:
+  #     - gfd-network
+  #   depends_on:
+  #     - mongodb
+  #   restart: unless-stopped
+  #   profiles:
+  #     - debug  # Only start with --profile debug flag
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 256M
+  #       reservations:
+  #         memory: 128M
+
 networks:
   gfd-network:
     driver: bridge

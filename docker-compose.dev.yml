@@ -134,6 +134,31 @@ services:
       retries: 3
       start_period: 30s
 
+  # MongoDB Express service - MongoDB Web Interface (Development)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: gfd-mongo-express-dev
+    ports:
+      - "${MONGO_EXPRESS_PORT:-8081}:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGODB_USERNAME:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD:-password}
+      - ME_CONFIG_MONGODB_URL=mongodb://${MONGODB_USERNAME:-admin}:${MONGODB_PASSWORD:-password}@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USERNAME:-admin}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD:-admin123}
+      - ME_CONFIG_SITE_BASEURL=/
+    networks:
+      - gfd-network
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   gfd-network:
     driver: bridge

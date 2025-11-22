@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "slither-analyzer>=0.10.0",
     "anyio>=4.11.0",
     "datasets>=4.0.0",
     "dgl>=1.1,<2.0",
@@ -18,7 +19,6 @@ dependencies = [
     "python-multipart>=0.0.20",
     "rootutils>=1.0.7",
     "scikit-learn>=1.7.1",
-    "slither-analyzer==0.8.0",
     "torch>=2.8.0",
     "tqdm>=4.67.1",
     "transformers>=4.55.2",
