@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Settings, LogOut, Shield } from 'lucide-react';
+import { User, Settings, LogOut, Shield, Clock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 const UserProfile = () => {
@@ -18,9 +18,14 @@ const UserProfile = () => {
 
   if (!user) return null;
 
-  const handleLogout = () => {
-    logout();
-    toast.success('Đã đăng xuất thành công');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Đã đăng xuất thành công');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Có lỗi xảy ra khi đăng xuất');
+    }
   };
 
   const getInitials = (name: string) => {
@@ -30,6 +35,22 @@ const UserProfile = () => {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Chưa cập nhật';
+    
+    try {
+      return new Date(dateString).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Không xác định';
+    }
   };
 
   return (
@@ -52,13 +73,37 @@ const UserProfile = () => {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent className="w-64" align="end">
+      <DropdownMenuContent className="w-80" align="end">
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
-            </p>
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-12 w-12">
+                <AvatarImage 
+                  src={user.avatar} 
+                  alt={user.name}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-semibold text-lg">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-xs leading-none text-muted-foreground mt-1">
+                  @{user.username}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+              <Mail className="h-3 w-3" />
+              <span>{user.email}</span>
+            </div>
+            {user.last_login && (
+              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Lần cuối: {formatDate(user.last_login)}</span>
+              </div>
+            )}
           </div>
         </DropdownMenuLabel>
         
