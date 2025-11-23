@@ -135,6 +135,8 @@ async def get_project(
         )
     
     project_doc = serialize_project(project_doc)
+    project_doc["created_at"] = to_vietnam(project_doc["created_at"])
+    project_doc["updated_at"] = to_vietnam(project_doc["updated_at"])
     return Project(**project_doc)
 
 
@@ -327,6 +329,12 @@ async def get_project_analysis_sessions(
     for session in sessions:
         session["id"] = str(session["_id"])
         del session["_id"]
-        result.append(AnalysisSession(**session))
-    
+        analysis_session = AnalysisSession(**session)
+        analysis_session.started_at = to_vietnam(analysis_session.started_at)
+        analysis_session.completed_at = to_vietnam(analysis_session.completed_at)
+        for step in analysis_session.steps:
+            step.started_at = to_vietnam(step.started_at)
+            step.completed_at = to_vietnam(step.completed_at)
+        result.append(analysis_session)
+    print(result)
     return result
