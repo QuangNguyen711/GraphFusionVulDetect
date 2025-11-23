@@ -116,7 +116,6 @@ async def get_projects_collection():
 
 async def get_analysis_sessions_collection():
     """Get analysis sessions collection"""
-    print(db_manager.database)
     if db_manager.database is None:
         await db_manager.connect()
     return db_manager.collections['analysis_sessions']

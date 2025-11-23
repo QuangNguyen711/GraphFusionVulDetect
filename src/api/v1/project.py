@@ -10,7 +10,7 @@ from ..schema.entity import (
     ProjectFile, ProjectStatus, UserInDB, AnalysisSession
 )
 from ...resource.database import get_projects_collection, get_analysis_sessions_collection
-from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
+from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db, to_vietnam
 from .authentication import get_current_user
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -53,8 +53,8 @@ async def create_project(
         "status": ProjectStatus.CREATED,
         "files": [],
         "analysis_count": 0,
-        "created_at": now_vietnam(),
-        "updated_at": now_vietnam()
+        "created_at": ensure_utc_for_db(now_vietnam()),
+        "updated_at": ensure_utc_for_db(now_vietnam())
     }
     
     # Insert project into database
@@ -69,8 +69,8 @@ async def create_project(
         status=project_doc["status"],
         files_count=len(project_doc["files"]),
         analysis_count=project_doc["analysis_count"],
-        created_at=project_doc["created_at"],
-        updated_at=project_doc["updated_at"]
+        created_at=to_vietnam(project_doc["created_at"]),
+        updated_at=to_vietnam(project_doc["updated_at"])
     )
 
 
@@ -102,8 +102,8 @@ async def list_projects(
             status=project["status"],
             files_count=len(project.get("files", [])),
             analysis_count=project.get("analysis_count", 0),
-            created_at=project["created_at"],
-            updated_at=project["updated_at"]
+            created_at=to_vietnam(project["created_at"]),
+            updated_at=to_vietnam(project["updated_at"])
         )
         for project in projects
     ]
@@ -166,7 +166,7 @@ async def update_project(
         )
     
     # Build update data
-    update_data = {"updated_at": now_vietnam()}
+    update_data = {"updated_at": ensure_utc_for_db(now_vietnam())}
     
     if project_data.name is not None:
         # Check for name conflicts
@@ -204,8 +204,8 @@ async def update_project(
         status=updated_project["status"],
         files_count=len(updated_project.get("files", [])),
         analysis_count=updated_project.get("analysis_count", 0),
-        created_at=updated_project["created_at"],
-        updated_at=updated_project["updated_at"]
+        created_at=to_vietnam(updated_project["created_at"]),
+        updated_at=to_vietnam(updated_project["updated_at"])
     )
 
 
@@ -274,7 +274,7 @@ async def add_file_to_project(
         file_size=len(file_content),
         file_path="",  # Will be set when file is saved during analysis
         file_hash=file_hash,
-        uploaded_at=now_vietnam()
+        uploaded_at=ensure_utc_for_db(now_vietnam())
     )
     
     # Update project with new file
@@ -282,7 +282,7 @@ async def add_file_to_project(
         {"_id": ObjectId(project_id)},
         {
             "$push": {"files": project_file.dict()},
-            "$set": {"updated_at": now_vietnam()}
+            "$set": {"updated_at": ensure_utc_for_db(now_vietnam())}
         }
     )
     

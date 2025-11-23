@@ -140,7 +140,7 @@ async def register_user(user_data: UserRegister):
         "full_name": user_data.full_name,
         "hashed_password": hashed_password,
         "is_active": True,
-        "created_at": now_vietnam(),
+        "created_at": ensure_utc_for_db(now_vietnam()),
         "last_login": None
     }
     
@@ -174,7 +174,7 @@ async def login_for_access_token(user_data: UserLogin):
     # Update last login timestamp
     await users_collection.update_one(
         {"_id": ObjectId(user.id)},
-        {"$set": {"last_login": now_vietnam()}}
+        {"$set": {"last_login": ensure_utc_for_db(now_vietnam())}}
     )
     
     # Create access token

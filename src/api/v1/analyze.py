@@ -101,7 +101,7 @@ async def analyze_contract(
         "file_hash": file_hash,
         "status": AnalysisSessionStatus.PROCESSING,
         "steps": [],
-        "started_at": now_vietnam(),
+        "started_at": ensure_utc_for_db(now_vietnam()),
         "completed_at": None,
         "error_message": None
     }
@@ -117,7 +117,7 @@ async def analyze_contract(
             file_size=len(file_content),
             file_path=file_path,
             file_hash=file_hash,
-            uploaded_at=now_vietnam()
+            uploaded_at=ensure_utc_for_db(now_vietnam())
         )
         
         # Check if file already exists in project
@@ -133,7 +133,7 @@ async def analyze_contract(
                     "$push": {"files": project_file.dict()},
                     "$inc": {"analysis_count": 1},
                     "$set": {
-                        "updated_at": now_vietnam(),
+                        "updated_at": ensure_utc_for_db(now_vietnam()),
                         "status": "analyzing"
                     }
                 }
@@ -144,7 +144,7 @@ async def analyze_contract(
                 {
                     "$inc": {"analysis_count": 1},
                     "$set": {
-                        "updated_at": now_vietnam(),
+                        "updated_at": ensure_utc_for_db(now_vietnam()),
                         "status": "analyzing"
                     }
                 }
@@ -166,8 +166,8 @@ async def analyze_contract(
                         step_name=result_data.get("node", "unknown"),
                         status="completed",
                         result_data=result_data.get("output", {}),
-                        started_at=now_vietnam(),
-                        completed_at=now_vietnam()
+                        started_at=ensure_utc_for_db(now_vietnam()),
+                        completed_at=ensure_utc_for_db(now_vietnam())
                     )
                     
                     await sessions_collection.update_one(
@@ -188,7 +188,7 @@ async def analyze_contract(
                 {
                     "$set": {
                         "status": AnalysisSessionStatus.COMPLETED,
-                        "completed_at": now_vietnam()
+                        "completed_at": ensure_utc_for_db(now_vietnam())
                     }
                 }
             )
@@ -200,7 +200,7 @@ async def analyze_contract(
                     {
                         "$set": {
                             "status": "completed",
-                            "updated_at": now_vietnam()
+                            "updated_at": ensure_utc_for_db(now_vietnam())
                         }
                     }
                 )
@@ -214,7 +214,7 @@ async def analyze_contract(
                 {
                     "$set": {
                         "status": AnalysisSessionStatus.FAILED,
-                        "completed_at": now_vietnam(),
+                        "completed_at": ensure_utc_for_db(now_vietnam()),
                         "error_message": str(e)
                     }
                 }
@@ -227,7 +227,7 @@ async def analyze_contract(
                     {
                         "$set": {
                             "status": "failed",
-                            "updated_at": now_vietnam()
+                            "updated_at": ensure_utc_for_db(now_vietnam())
                         }
                     }
                 )
