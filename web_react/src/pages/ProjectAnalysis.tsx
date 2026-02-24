@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { StreamingResults } from "@/components/StreamingResults";
 import { ContractVisualization } from "@/components/ContractVisualization";
+import { RefactorChatbot } from "@/components/RefactorChatbot";
 import { FileUpload } from "@/components/FileUpload";
 import { TruncatedText } from "@/components/TruncatedText";
 import { projectService, Project, AnalysisSession } from "@/services/project";
@@ -444,6 +445,19 @@ const ProjectAnalysis = () => {
           </div>
         )}
       </div>
+
+      {/* Refactor Chatbot */}
+      {selectedSession && (
+        <RefactorChatbot 
+          vulnerableFunctions={
+            selectedSession.steps
+              ?.flatMap(step => step.result_data?.func_vulnerability_predictions || [])
+              .filter((func, index, self) => 
+                index === self.findIndex(f => f.function_name === func.function_name)
+              ) || []
+          } 
+        />
+      )}
     </div>
   );
 };

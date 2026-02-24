@@ -10,16 +10,16 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
-from ...services.analysis_service import vulnerability_analysis_service
-from ..schema.entity import (
+from src.services.analysis_service import vulnerability_analysis_service
+from src.models.entity import (
     StreamingNodeOutput, AnalysisSession, AnalysisSessionCreate,
     AnalysisSessionStatus, AnalysisStep, ProjectFile, UserInDB
 )
-from ...resource.database import get_analysis_sessions_collection, get_projects_collection
-from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
-from .authentication import get_current_user
+from src.infrastructure.database import get_analysis_sessions_collection, get_projects_collection
+from src.utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
+from .authentication_router import get_current_user
 
-router = APIRouter()
+router = APIRouter(tags=["analysis"])
 
 # Setup logging
 logger = logging.getLogger("GraphFusionVulDetect-API")

@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from langchain_core.runnables import RunnableConfig
 
-from src.graph.state import State
+from src.workflows.gfd_workflow.graph.state import State
 
 
 def detect_vulnerability_func(state: State, config: RunnableConfig) -> State:

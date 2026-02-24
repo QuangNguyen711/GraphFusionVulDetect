@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { ArrowLeft, Activity, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { StreamingResults } from "@/components/StreamingResults";
 import { ContractVisualization } from "@/components/ContractVisualization";
+import { RefactorChatbot } from "@/components/RefactorChatbot";
 import { projectService } from "@/services/project";
 import { toast } from "sonner";
 
@@ -227,6 +228,17 @@ const Analysis = () => {
           <ContractVisualization data={streamingResults} />
         )}
       </div>
+
+      {/* Refactor Chatbot */}
+      <RefactorChatbot 
+        vulnerableFunctions={
+          streamingResults
+            .flatMap(result => result.output?.func_vulnerability_predictions || [])
+            .filter((func, index, self) => 
+              index === self.findIndex(f => f.function_name === func.function_name)
+            )
+        } 
+      />
     </div>
   );
 };

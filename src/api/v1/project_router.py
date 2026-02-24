@@ -1,17 +1,15 @@
 import hashlib
 import logging
 from typing import List, Optional
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from bson import ObjectId
-from ..schema.entity import (
+from src.models.entity import (
     ProjectCreate, ProjectUpdate, Project, ProjectResponse, 
     ProjectFile, ProjectStatus, UserInDB, AnalysisSession
 )
-from ...resource.database import get_projects_collection, get_analysis_sessions_collection
-from ...utils.timezone import now_utc, now_vietnam, ensure_utc_for_db, to_vietnam
-from .authentication import get_current_user
+from src.infrastructure.database import get_projects_collection, get_analysis_sessions_collection
+from src.utils.timezone import now_vietnam, ensure_utc_for_db, to_vietnam
+from .authentication_router import get_current_user
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 logger = logging.getLogger("GraphFusionVulDetect-Projects")
@@ -283,7 +281,7 @@ async def add_file_to_project(
     await projects_collection.update_one(
         {"_id": ObjectId(project_id)},
         {
-            "$push": {"files": project_file.dict()},
+            "$push": {"files": project_file.model_dump()},
             "$set": {"updated_at": ensure_utc_for_db(now_vietnam())}
         }
     )

@@ -2,15 +2,11 @@ from typing import Optional
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
-import os
-import dotenv
-from .v1.authentication import get_current_user
-from .schema.entity import UserInDB
+from .v1.authentication_router import get_current_user
+from src.models.entity import UserInDB
+from src.config.settings import settings
 
-# Load environment variables
-dotenv.load_dotenv()
-
-JWT_SECRET = os.getenv("JWT_SECRET", "your-jwt-secret-change-this-in-production")
+JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = "HS256"
 
 security = HTTPBearer(auto_error=False)
@@ -30,7 +26,7 @@ async def get_current_user_optional(
             return None
         
         # Import here to avoid circular imports
-        from .v1.authentication import get_user
+        from .v1.authentication_router import get_user
         user = await get_user(username=username)
         return user
     except (jwt.PyJWTError, Exception):

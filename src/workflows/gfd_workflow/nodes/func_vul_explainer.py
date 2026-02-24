@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 from langchain_core.runnables import RunnableConfig
 import logging
-from src.graph.state import State
+from src.workflows.gfd_workflow.graph.state import State
 
 
 def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
@@ -32,12 +32,15 @@ def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
             f"Function Name: `{func_name}`\n"
             f"```solidity\n{func_code}\n```\n\n"
             "Your analysis should be short and only include these headings:\n"
-            "1.  **Vulnerability Confirmation:** State whether you agree with the model's finding and explain why.\n"
+            "1.  **Vulnerability Explaination:** Explain why this function have vulnerability.\n"
             "2.  **Impact:** Describe the potential consequences if this vulnerability is exploited (e.g., unfair advantage, locked funds).\n"
         )
         try:
             response = llm.invoke(prompt)
-            explanations.append({"function_name": func_name, "explanation": response.content})
+            answer = response.content.strip()
+            if "</think>" in answer:
+                answer = answer.split("</think>")[1].strip()
+            explanations.append({"function_name": func_name, "explanation": answer})
         except Exception as e:
             explanations.append({"function_name": func_name, "explanation": f"Error generating explanation: {e}"})
 

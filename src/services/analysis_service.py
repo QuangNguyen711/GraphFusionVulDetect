@@ -18,7 +18,7 @@ class VulnerabilityAnalysisService:
         """Initialize models if not already done"""
         if self.app_graph is None or self.config is None:
             # Import here to avoid circular imports
-            from ..api.app import get_app_graph, get_models_config
+            from .graph_loader import get_app_graph, get_models_config
             
             self.app_graph = get_app_graph()
             self.config = get_models_config()

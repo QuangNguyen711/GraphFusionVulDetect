@@ -12,10 +12,10 @@ import torch.nn.functional as F
 import networkx as nx
 from transformers import RobertaTokenizer, RobertaModel
 from langchain_openai import ChatOpenAI
-from src.utils.helper import seed_everything, prepare_solc_artifacts
-from src.model.GraphClasifier import GraphNN
-from src.model.NodeDetector import NodeClassifierGNN
-from src.graph.builder import build_graph
+from src.workflows.gfd_workflow.utils.helper import seed_everything, prepare_solc_artifacts
+from src.infrastructure.analysis_model.GraphClasifier import GraphNN
+from src.infrastructure.analysis_model.NodeDetector import NodeClassifierGNN
+from src.workflows.gfd_workflow.graph.builder import build_graph
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,14 +63,14 @@ graph_vul_model = GraphNN(mtype=["GCN"], infeats=768, hfeats=[2048, 2048],
                           fc1_layer=256, fc2_layer=64, n_gph=0, outclass=2,
                           gptype="max", ginfeat=1024, num_query_vectors=2)
 
-graph_vul_model.load_state_dict(torch.load("src/model/best_model_GCN_2L_max.pt", map_location=device))
+graph_vul_model.load_state_dict(torch.load("src/workflows/gfd_workflow/model/best_model_GCN_2L_max.pt", map_location=device))
 graph_vul_model = graph_vul_model.to(device)
 graph_vul_model.eval()
 
 # Load node vulnerability detection model
 node_vul_model = NodeClassifierGNN(mtype=["GAT", ""], infeats=768, hfeats=[256, 128],
                                     fc1_layer=256, fc2_layer=64, outclass=2, ginfeat=1024)
-node_vul_model.load_state_dict(torch.load("src/model/best_node_classifier_model.pt", map_location=device))
+node_vul_model.load_state_dict(torch.load("src/workflows/gfd_workflow/model/best_node_classifier_model.pt", map_location=device))
 node_vul_model = node_vul_model.to(device)
 node_vul_model.eval()
 

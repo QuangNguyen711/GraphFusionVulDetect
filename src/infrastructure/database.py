@@ -2,10 +2,7 @@ import os
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional
-import dotenv
-
-# Load environment variables
-dotenv.load_dotenv()
+from src.config.settings import settings
 
 logger = logging.getLogger("GraphFusionVulDetect-Database")
 
@@ -20,8 +17,8 @@ class DatabaseManager:
     async def connect(self):
         """Connect to MongoDB"""
         try:
-            mongodb_url = os.getenv("MONGODB_URL", "mongodb://admin:password@localhost:27017/?authSource=admin")
-            database_name = os.getenv("MONGODB_DATABASE", "graphfusion")
+            mongodb_url = settings.MONGODB_URL
+            database_name = settings.MONGODB_DATABASE
             
             self.client = AsyncIOMotorClient(mongodb_url, serverSelectionTimeoutMS=5000)
             self.database = self.client[database_name]

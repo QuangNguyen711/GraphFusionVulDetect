@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field, EmailStr
 from enum import Enum
 from datetime import datetime
-from ...utils.timezone import now_utc, now_vietnam, to_vietnam
+from src.utils.timezone import now_utc, now_vietnam, to_vietnam
 
 # Authentication schemas
 class UserRegister(BaseModel):

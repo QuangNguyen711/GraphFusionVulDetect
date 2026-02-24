@@ -1,10 +1,10 @@
 from __future__ import nested_scopes
 from langgraph.graph import END, StateGraph, START
-from src.graph.state import State
-from src.nodes.fcg_converter.fcg_converter import convert_to_fcg
-from src.nodes.func_vul_detector import detect_vulnerability_func
-from src.nodes.src_vul_detector import detect_vulnerability_src
-from src.nodes.func_vul_explainer import explain_vulnerability_func
+from src.workflows.gfd_workflow.graph.state import State
+from src.workflows.gfd_workflow.nodes.fcg_converter.fcg_converter import convert_to_fcg
+from src.workflows.gfd_workflow.nodes.func_vul_detector import detect_vulnerability_func
+from src.workflows.gfd_workflow.nodes.src_vul_detector import detect_vulnerability_src
+from src.workflows.gfd_workflow.nodes.func_vul_explainer import explain_vulnerability_func
 
 def src_is_vulnerable(state: State) -> str:
     """Conditional function to check if the source code vulnerability detection predicted 'Vulnerable'."""

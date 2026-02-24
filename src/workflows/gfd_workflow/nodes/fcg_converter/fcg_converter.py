@@ -9,7 +9,7 @@ import dgl
 import networkx as nx
 from langchain_core.runnables import RunnableConfig
 
-from src.graph.state import State
+from src.workflows.gfd_workflow.graph.state import State
 from .embedding_generator import extract_function_code, get_embeddings
 from .graph_converter import get_call_graph
 
