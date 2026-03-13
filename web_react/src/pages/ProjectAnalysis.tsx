@@ -295,8 +295,8 @@ const ProjectAnalysis = () => {
           </div>
 
           {/* Analysis Sessions Sidebar */}
-          <div>
-            <Card className="glass p-6">
+          <div className="lg:col-span-1">
+            <Card className="glass p-6 h-full">
               <h3 className="font-semibold text-foreground mb-4">
                 Analysis History
               </h3>
@@ -310,9 +310,9 @@ const ProjectAnalysis = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {analysisSessions.map((session) => (
+                  {analysisSessions.map((session, index) => (
                     <div
-                      key={session.id}
+                      key={session.id || `session-${index}`}
                       className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedSession?.id === session.id
                           ? "border-primary bg-primary/5"

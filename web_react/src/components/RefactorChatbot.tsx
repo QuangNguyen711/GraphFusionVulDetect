@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { refactorBotService, ConversationMessage, RefactoringSuggestion } from "@/services/refactorbot";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface VulnerableFunction {
   function_name: string;
@@ -29,6 +31,12 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
   const [suggestions, setSuggestions] = useState<RefactoringSuggestion[]>([]);
   const [explanation, setExplanation] = useState("");
   const [suggestedCode, setSuggestedCode] = useState("");
+  const [analysisCache, setAnalysisCache] = useState<Record<string, {
+    history: ConversationMessage[],
+    suggestions: RefactoringSuggestion[],
+    explanation: string,
+    code: string
+  }>>({});
 
   // Filter only vulnerable functions (prediction === 1)
   const vulnerableOnly = vulnerableFunctions.filter(f => f.prediction === 1);
@@ -38,6 +46,17 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
     if (!func) return;
 
     setSelectedFunction(func);
+
+    // Check cache
+    if (analysisCache[functionName]) {
+      const cached = analysisCache[functionName];
+      setConversationHistory(cached.history);
+      setSuggestions(cached.suggestions);
+      setExplanation(cached.explanation);
+      setSuggestedCode(cached.code);
+      return;
+    }
+
     setConversationHistory([]);
     setSuggestions([]);
     setExplanation("");
@@ -55,18 +74,31 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
       setExplanation(response.explanation);
       
       // Extract code from suggestions if available
-      const codeSnippet = response.suggestions.find(s => s.code)?.code;
+      let codeSnippet = response.suggestions.find(s => s.code)?.code || "";
       if (codeSnippet) {
         setSuggestedCode(codeSnippet);
       }
 
-      // Add to conversation history
-      setConversationHistory([
+      const initialHistory: ConversationMessage[] = [
         {
           role: "assistant",
           content: response.explanation
         }
-      ]);
+      ];
+
+      // Add to conversation history
+      setConversationHistory(initialHistory);
+
+      // Save to cache
+      setAnalysisCache(prev => ({
+        ...prev,
+        [functionName]: {
+          history: initialHistory,
+          suggestions: response.suggestions,
+          explanation: response.explanation,
+          code: codeSnippet
+        }
+      }));
 
       toast.success("Analysis complete!");
     } catch (error) {
@@ -104,12 +136,25 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
         content: response.bot_message
       };
       
-      setConversationHistory([...newHistory, assistantMessage]);
+      const updatedHistory = [...newHistory, assistantMessage];
+      setConversationHistory(updatedHistory);
 
       // Update suggested code if provided
+      let newCode = suggestedCode;
       if (response.suggested_code) {
-        setSuggestedCode(response.suggested_code);
+        newCode = response.suggested_code;
+        setSuggestedCode(newCode);
       }
+      
+      // Update Cache
+      setAnalysisCache(prev => ({
+        ...prev,
+        [selectedFunction.function_name]: {
+            ...prev[selectedFunction.function_name],
+            history: updatedHistory,
+            code: newCode
+        }
+      }));
 
     } catch (error) {
       console.error("Error continuing conversation:", error);
@@ -161,7 +206,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
 
       {/* Chatbot Panel */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-[450px] h-[600px] shadow-2xl z-50 flex flex-col">
+        <Card className="fixed bottom-6 right-6 w-[800px] h-[700px] shadow-2xl z-50 flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
             <div className="flex items-center gap-2">
@@ -235,7 +280,33 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                           : "bg-muted"
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.role === "user" ? (
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        <div className="text-sm prose dark:prose-invert max-w-none">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                code({node, inline, className, children, ...props}: any) {
+                                  const match = /language-(\w+)/.exec(className || '')
+                                  return !inline && match ? (
+                                    <pre className="bg-background p-2 rounded overflow-x-auto my-2">
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    </pre>
+                                  ) : (
+                                    <code className="bg-background px-1 py-0.5 rounded font-mono text-xs" {...props}>
+                                      {children}
+                                    </code>
+                                  )
+                                }
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -264,10 +335,18 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                   </div>
                 )}
 
-                {/* Suggestions */}
+                {/* Suggestions - Filter out duplicates or generic advice already in chat */}
                 {suggestions.length > 0 && (
                   <div className="space-y-2">
-                    {suggestions.filter(s => s.type !== 'code_fix').map((suggestion, idx) => (
+                    {suggestions.filter(s => {
+                         // Don't show if it's identical to the main explanation
+                         if (s.content && explanation && s.content.trim() === explanation.trim()) return false;
+                         // Don't show if explanation already contains this suggestion completely
+                         if (s.content && explanation && explanation.includes(s.content)) return false;
+                         // Don't show if it's just code (already handled)
+                         if (s.type === 'code_fix') return false;
+                         return true;
+                    }).map((suggestion, idx) => (
                       <div key={idx} className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                         <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">
                           {suggestion.description}

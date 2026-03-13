@@ -6,41 +6,22 @@ from src.workflows.chatbot_workflow.nodes.handle_conversation import handle_conv
 from src.workflows.chatbot_workflow.nodes.validate_refactoring import validate_refactoring
 
 
-def should_continue_conversation(state: State) -> str:
+def decide_start_node(state: State) -> str:
     """
-    Determine if we should continue the conversation or end.
-    
-    Args:
-        state: Current workflow state
-        
-    Returns:
-        "continue" if conversation should continue, "end" otherwise
+    Decide where to start the workflow.
+    If conversation history exists, we skip analysis/suggestions and go straight to conversation.
+    Otherwise (initial run), we start with analysis.
     """
-    # If there's a conversation history with recent user input
     if state.get("conversation_history"):
-        last_message = state["conversation_history"][-1]
-        # Check if user is asking for more help or has questions
-        if last_message.get("role") == "user":
-            content = last_message.get("content", "").lower()
-            if any(word in content for word in ["thanks", "done", "that's all", "finish", "complete"]):
-                return "end"
-            return "continue"
-    return "end"
+        return "handle_conversation"
+    return "analyze_code"
 
 
-def has_issue_description(state: State) -> str:
-    """
-    Check if we have an issue description to work with.
-    
-    Args:
-        state: Current workflow state
-        
-    Returns:
-        "yes" if issue description exists, "no" otherwise
-    """
+def check_issue_exists(state: State) -> str:
+    """Check if issue description exists to proceed to suggestions."""
     if state.get("issue_description"):
-        return "yes"
-    return "no"
+        return "generate_suggestions"
+    return "end"
 
 
 def build_graph() -> StateGraph:
@@ -58,40 +39,33 @@ def build_graph() -> StateGraph:
     graph_builder.add_node("handle_conversation", handle_conversation)
     graph_builder.add_node("validate_refactoring", validate_refactoring)
     
-    # Define edges
-    graph_builder.add_edge(START, "analyze_code")
+    # Define start behavior
+    graph_builder.add_conditional_edges(
+        START,
+        decide_start_node,
+        {
+            "analyze_code": "analyze_code",
+            "handle_conversation": "handle_conversation"
+        }
+    )
     
     # After analysis, check if we have an issue description
     graph_builder.add_conditional_edges(
         "analyze_code",
-        has_issue_description,
+        check_issue_exists,
         {
-            "yes": "generate_suggestions",
-            "no": END
+            "generate_suggestions": "generate_suggestions",
+            "end": END
         }
     )
     
     # After generating suggestions, go to validation
     graph_builder.add_edge("generate_suggestions", "validate_refactoring")
     
-    # After validation, check if we should continue conversation
-    graph_builder.add_conditional_edges(
-        "validate_refactoring",
-        should_continue_conversation,
-        {
-            "continue": "handle_conversation",
-            "end": END
-        }
-    )
+    # After validation, end workflow (wait for user input)
+    graph_builder.add_edge("validate_refactoring", END)
     
-    # After handling conversation, loop back to validation or end
-    graph_builder.add_conditional_edges(
-        "handle_conversation",
-        should_continue_conversation,
-        {
-            "continue": "handle_conversation",
-            "end": END
-        }
-    )
+    # After handling conversation, end workflow (wait for user input)
+    graph_builder.add_edge("handle_conversation", END)
     
     return graph_builder.compile()

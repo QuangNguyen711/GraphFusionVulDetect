@@ -37,7 +37,7 @@ def analyze_code(state: State, config: RunnableConfig) -> State:
     # Get an LLM instance from the client pool
     try:
         llm = llm_client.get_instance()
-        logger.info(f"Got LLM instance: {type(llm).__name__}")
+        print(f"Got LLM instance: {type(llm).__name__}")
         
         prompt = (
             "You are an expert smart contract security auditor. "
@@ -55,13 +55,13 @@ def analyze_code(state: State, config: RunnableConfig) -> State:
             "3. Areas that need refactoring\n"
         )
         
-        logger.info(f"Sending prompt to LLM (length: {len(prompt)} chars)")
-        logger.debug(f"Prompt: {prompt[:200]}...")
+        print(f"Sending prompt to LLM (length: {len(prompt)} chars)")
+        print(f"Prompt: {prompt}")
         
         response = llm.invoke(prompt)
-        logger.info(f"Received response: {type(response).__name__}")
-        logger.debug(f"Response content type: {type(response.content) if hasattr(response, 'content') else 'N/A'}")
-        logger.debug(f"Response content: {response.content[:200] if response.content else 'NONE'}...")
+        print(f"Received response: {type(response).__name__}")
+        print(f"Response content type: {type(response.content) if hasattr(response, 'content') else 'N/A'}")
+        print(f"Response content: {response.content if response.content else 'NONE'}")
         
         answer = response.content.strip() if response.content else ""
         
@@ -79,7 +79,7 @@ def analyze_code(state: State, config: RunnableConfig) -> State:
             "has_issue": bool(issue_description)
         }
         
-        logger.info("Code analysis completed successfully")
+        print("Code analysis completed successfully")
         
     except Exception as e:
         logger.error(f"Error during code analysis: {e}", exc_info=True)

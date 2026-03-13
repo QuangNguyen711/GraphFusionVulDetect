@@ -35,7 +35,7 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
     
     try:
         llm = llm_client.get_instance()
-        logger.info(f"Got LLM instance for generating suggestions")
+        print(f"Got LLM instance for generating suggestions")
         
         # Build the prompt based on the issue type
         prompt = (
@@ -50,19 +50,24 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
         
         prompt += (
             "Provide:\n"
-            "1. **Specific Code Fixes**: Show exactly what code to change\n"
+            "1. **Specific Code Fixes**: Show exactly what code to change. YOU MUST WRAP THE CODE IN A MARKDOWN BLOCK like this:\n"
+            "```solidity\n"
+            "// ... your corrected code here ...\n"
+            "```\n"
             "2. **Pattern Advice**: Suggest design patterns or best practices\n"
             "3. **Security Recommendations**: Additional security improvements\n"
             "4. **Resource Links**: Relevant documentation or examples\n\n"
             "Format your response clearly with these sections."
         )
         
-        logger.info(f"Sending prompt to LLM for suggestions (length: {len(prompt)} chars)")
-        logger.debug(f"Prompt preview: {prompt[:200]}...")
+        print(f"Sending prompt to LLM for suggestions (length: {len(prompt)} chars)")
         
         response = llm.invoke(prompt)
-        logger.info(f"Received response from LLM")
-        logger.debug(f"Response content: {response.content[:200] if response.content else 'NONE'}...")
+        print(f"Received response from LLM")
+        
+        # Log substantial part of the response for debugging
+        response_preview = response.content if response.content else 'NONE'
+        print(f"Response preview: {response_preview}...")
         
         answer = response.content.strip() if response.content else ""
         
@@ -84,13 +89,37 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
                 suggested_code = suggestion["code"]
                 break
         
+        if not suggested_code:
+            # Emergency extraction: look for any large block of code-like text if regex failed
+            # This helps if the LLM forgot the backticks but provided indentation or brackets
+            print("WARNING: No code block found in standard format. Attempting fallback extraction...")
+            # Look for function definition
+            function_pattern = re.search(r'(function\s+\w+\s*\(.*?\)\s*(?:internal|public|external|private).*?\{)', answer, re.DOTALL)
+            if function_pattern and "```" not in answer:
+                # If we see a function signature but no backticks, it might be plain text code
+                # Try to grab from the function start to the end or next double newline
+                start_index = function_pattern.start()
+                # Simple heuristic: take next 500 chars or until end
+                fallback_code = answer[start_index:]
+                suggestions.append({
+                    "type": "code_fix",
+                    "description": "Fallback extracted code",
+                    "code": fallback_code
+                })
+                suggested_code = fallback_code
+                print("Fallback extractions successful (heuristics used)")
+
         state["refactoring_suggestions"] = suggestions
         state["explanation"] = answer
         state["suggested_code"] = suggested_code  # Set suggested code or None
         state["bot_message"] = f"I've analyzed the code and found the following suggestions for {issue_description}:"
         
-        logger.info(f"Generated {len(suggestions)} refactoring suggestions")
-        logger.info(f"Suggested code extracted: {bool(suggested_code)}")
+        print(f"Generated {len(suggestions)} refactoring suggestions")
+        print(f"Suggested code extracted: {bool(suggested_code)}")
+        if suggested_code:
+            print(f"Suggested code length: {len(suggested_code)}")
+        else:
+            print("debug: Full Answer that failed extraction:\n" + answer + "\n---END DEBUG---")
         
     except Exception as e:
         logger.error(f"Error generating suggestions: {e}", exc_info=True)
@@ -117,16 +146,35 @@ def _parse_suggestions(llm_response: str, issue_type: str) -> list:
     """
     suggestions = []
     
-    # Extract code blocks
-    code_blocks = re.findall(r'```(?:solidity)?\n(.*?)```', llm_response, re.DOTALL)
+    # Extract code blocks - simplified and more robust strategy
+    # Strategy: Find all blocks between triple backticks, then clean up the language identifier
+    code_blocks = re.findall(r'```(.*?)\s*```', llm_response, re.DOTALL)
     
     if code_blocks:
+        print(f"DEBUG: Found {len(code_blocks)} code blocks via regex")
         for i, code in enumerate(code_blocks):
+            # Clean up potential artifacts
+            code = code.strip()
+            
+            # Common language identifiers to strip
+            # We split by newline. If the first line is just a language identifier, we remove it.
+            if '\n' in code:
+                first_line, rest = code.split('\n', 1)
+                cleaned_first_line = first_line.strip().lower()
+                # Check if first line looks like a language ID (no spaces, alphanumeric)
+                if cleaned_first_line in ['solidity', 'sol', 'javascript', 'js', 'typescript', 'ts', 'python', 'py']:
+                    code = rest.strip()
+            elif code.strip().lower() in ['solidity', 'sol']:
+                # The entire block is just the language ID? invalid.
+                continue
+                
             suggestions.append({
                 "type": "code_fix",
                 "description": f"Refactored code for {issue_type}",
-                "code": code.strip()
+                "code": code
             })
+    else:
+        print("DEBUG: No code blocks found via standard regex.")
     
     # Look for pattern advice
     if "pattern" in llm_response.lower() or "best practice" in llm_response.lower():

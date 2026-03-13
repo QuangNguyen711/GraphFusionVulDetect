@@ -34,11 +34,11 @@ class ChatbotWorkflow:
         Initialize the workflow by loading the LLM client.
         Called ONCE during app startup.
         """
-        logger.info("Initializing Chatbot Refactoring Workflow...")
+        print("Initializing Chatbot Refactoring Workflow...")
         
         try:
             self._load_llm_client()
-            logger.info("Chatbot workflow initialized successfully")
+            print("Chatbot workflow initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize chatbot workflow: {e}")
             raise
@@ -47,7 +47,7 @@ class ChatbotWorkflow:
         """
         Load and configure the LLM client pool.
         """
-        logger.info("Loading LLM client configuration...")
+        print("Loading LLM client configuration...")
         
         # Get API keys from settings
         # Support multiple keys for load balancing
@@ -56,7 +56,7 @@ class ChatbotWorkflow:
         # Primary key
         if hasattr(settings, 'GEMINI_API_KEY1') and settings.GEMINI_API_KEY1:
             api_keys.append(settings.GEMINI_API_KEY1)
-            logger.info(f"Found GEMINI_API_KEY1: {settings.GEMINI_API_KEY1[:8]}...")
+            print(f"Found GEMINI_API_KEY1: {settings.GEMINI_API_KEY1[:8]}...")
         else:
             logger.warning("GEMINI_API_KEY1 not found or empty!")
         
@@ -67,7 +67,7 @@ class ChatbotWorkflow:
                 key = getattr(settings, key_name)
                 if key:
                     api_keys.append(key)
-                    logger.info(f"Found {key_name}: {key[:8]}...")
+                    print(f"Found {key_name}: {key[:8]}...")
         
         if not api_keys:
             logger.error("No API keys found in settings!")
@@ -80,12 +80,12 @@ class ChatbotWorkflow:
         max_tokens = getattr(settings, 'CHATBOT_MAX_TOKENS', 4096)
         top_p = getattr(settings, 'CHATBOT_TOP_P', 1.0)
         
-        logger.info(f"LLM Configuration:")
-        logger.info(f"  Model: {model}")
-        logger.info(f"  Base URL: {base_url}")
-        logger.info(f"  Temperature: {temperature}")
-        logger.info(f"  Max Tokens: {max_tokens}")
-        logger.info(f"  Top P: {top_p}")
+        print(f"LLM Configuration:")
+        print(f"  Model: {model}")
+        print(f"  Base URL: {base_url}")
+        print(f"  Temperature: {temperature}")
+        print(f"  Max Tokens: {max_tokens}")
+        print(f"  Top P: {top_p}")
         
         # Initialize the LLM client pool
         self.llm_client = LLMClient(
@@ -98,8 +98,8 @@ class ChatbotWorkflow:
             add_stop_token=["```\n```", "STOP_REFACTORING"]
         )
         
-        logger.info(f"LLM client pool initialized with {len(api_keys)} API key(s)")
-        logger.info(f"Using model: {model} at {base_url}")
+        print(f"LLM client pool initialized with {len(api_keys)} API key(s)")
+        print(f"Using model: {model} at {base_url}")
     
     def build_pipeline(self):
         """
@@ -114,7 +114,7 @@ class ChatbotWorkflow:
         
         if not self.graph:
             self.graph = build_graph()
-            logger.info("Chatbot workflow graph built successfully")
+            print("Chatbot workflow graph built successfully")
         
         return self.graph
     
@@ -155,15 +155,15 @@ class ChatbotWorkflow:
         
         try:
             # Execute the workflow
-            logger.info("Starting chatbot workflow execution...")
-            logger.info(f"Input - Code length: {len(code)} chars, Issue: {issue_description}")
-            logger.info(f"Conversation history: {len(conversation_history or [])} messages")
-            logger.debug(f"Initial state keys: {list(initial_state.keys())}")
+            print("Starting chatbot workflow execution...")
+            print(f"Input - Code length: {len(code)} chars, Issue: {issue_description}")
+            print(f"Conversation history: {len(conversation_history or [])} messages")
+            print(f"Initial state keys: {list(initial_state.keys())}")
             
             result = self.graph.invoke(initial_state, config)
             
-            logger.info("Chatbot workflow execution completed")
-            logger.debug(f"Result keys: {list(result.keys()) if result else 'NONE'}")
+            print("Chatbot workflow execution completed")
+            print(f"Result keys: {list(result.keys()) if result else 'NONE'}")
             return result
             
         except Exception as e:
@@ -208,15 +208,15 @@ class ChatbotWorkflow:
         
         try:
             # Execute the workflow asynchronously
-            logger.info("Starting async chatbot workflow execution...")
-            logger.info(f"Input - Code length: {len(code)} chars, Issue: {issue_description}")
-            logger.info(f"Conversation history: {len(conversation_history or [])} messages")
-            logger.debug(f"Initial state keys: {list(initial_state.keys())}")
+            print("Starting async chatbot workflow execution...")
+            print(f"Input - Code length: {len(code)} chars, Issue: {issue_description}")
+            print(f"Conversation history: {len(conversation_history or [])} messages")
+            print(f"Initial state keys: {list(initial_state.keys())}")
             
             result = await self.graph.ainvoke(initial_state, config)
             
-            logger.info("Async chatbot workflow execution completed")
-            logger.debug(f"Result keys: {list(result.keys()) if result else 'NONE'}")
+            print("Async chatbot workflow execution completed")
+            print(f"Result keys: {list(result.keys()) if result else 'NONE'}")
             return result
             
         except Exception as e:

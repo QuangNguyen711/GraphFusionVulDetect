@@ -25,7 +25,7 @@ def validate_refactoring(state: State, config: RunnableConfig) -> State:
     suggested_code = state.get("suggested_code") or ""
     original_code = state.get("code") or ""
     
-    logger.info(f"Validating refactoring (suggested_code length: {len(suggested_code)}, original length: {len(original_code)})")
+    print(f"Validating refactoring (suggested_code length: {len(suggested_code)}, original length: {len(original_code)})")
     
     validation_result = {
         "is_valid": True,
@@ -37,10 +37,10 @@ def validate_refactoring(state: State, config: RunnableConfig) -> State:
     if not suggested_code.strip():
         validation_result["is_valid"] = False
         validation_result["warnings"].append("No suggested code provided")
-        logger.warning("Validation failed: No suggested code provided")
+        print("Validation failed: No suggested code provided")
     elif suggested_code == original_code:
         validation_result["warnings"].append("Suggested code is identical to original")
-        logger.warning("Validation warning: Suggested code identical to original")
+        print("Validation warning: Suggested code identical to original")
     
     # Check for common Solidity patterns
     if suggested_code:
@@ -54,8 +54,8 @@ def validate_refactoring(state: State, config: RunnableConfig) -> State:
     state["validation_result"] = validation_result
     
     if validation_result["warnings"]:
-        logger.warning(f"Validation warnings: {validation_result['warnings']}")
+        print(f"Validation warnings: {validation_result['warnings']}")
     else:
-        logger.info("Validation passed successfully")
+        print("Validation passed successfully")
     
     return state

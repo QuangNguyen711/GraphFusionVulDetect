@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/FileUpload";
 import Header from "@/components/Header";
-import { Shield, Sparkles, Zap, Loader2 } from "lucide-react";
+import { Shield, Sparkles, Zap, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { projectService } from "@/services/project";
+import { tokenService, TokenSearchResult } from "@/services/token";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -16,8 +19,48 @@ const Index = () => {
   const [selectedFile, setSelectedFile] = useState<{ file: File; content: string } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
 
+  // Token Search State
+  const [activeTab, setActiveTab] = useState("upload");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<TokenSearchResult[]>([]);
+  const [selectedToken, setSelectedToken] = useState<TokenSearchResult | null>(null);
+  const [tokenPlatforms, setTokenPlatforms] = useState<Record<string, string>>({});
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+
   const handleFileSelect = (file: File, content: string) => {
     setSelectedFile({ file, content });
+  };
+
+  const handleTokenSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setSearchResults([]);
+    setSelectedToken(null);
+    setTokenPlatforms({});
+    setSelectedPlatform("");
+    
+    try {
+        const results = await tokenService.searchTokens(searchQuery);
+        setSearchResults(results);
+    } catch (e) {
+        toast.error("Failed to search token");
+    } finally {
+        setIsSearching(false);
+    }
+  };
+  
+  const handleSelectToken = async (token: TokenSearchResult) => {
+      setSelectedToken(token);
+      setSelectedPlatform("");
+      try {
+          const platforms = await tokenService.getPlatforms(token.id);
+          setTokenPlatforms(platforms);
+          const keys = Object.keys(platforms);
+          if (keys.length > 0) setSelectedPlatform(keys[0]);
+      } catch (e) {
+          toast.error("Failed to load platforms");
+      }
   };
 
   const handleAnalyze = async () => {
@@ -26,18 +69,44 @@ const Index = () => {
       return;
     }
 
-    if (!selectedFile) {
-      toast.error("Please select a Solidity file");
-      return;
+    let fileToUse = selectedFile;
+    
+    if (activeTab === "search") {
+        if (!selectedToken || !selectedPlatform) {
+            toast.error("Please select a token and chain");
+            return;
+        }
+        
+        setIsCreatingProject(true);
+        try {
+            const address = tokenPlatforms[selectedPlatform];
+            const tokenData = await tokenService.analyzeToken(selectedPlatform, address, selectedToken.name);
+            
+            const blob = new Blob([tokenData.source_code], { type: 'text/plain' });
+            const file = new File([blob], tokenData.file_name, { lastModified: Date.now() });
+            
+            fileToUse = { 
+                file: file, 
+                content: tokenData.source_code 
+            };
+        } catch (e) {
+             toast.error("Failed to fetch source code");
+             setIsCreatingProject(false);
+             return;
+        }
+    } else {
+        if (!fileToUse) {
+            toast.error("Please select a Solidity file");
+            return;
+        }
+        setIsCreatingProject(true);
     }
-
-    setIsCreatingProject(true);
     
     try {
       // First create the project in the backend
       const project = await projectService.createProject({
         name: projectName.trim(),
-        description: `Analysis project for ${selectedFile.file.name}`
+        description: `Analysis project for ${fileToUse!.file.name}`
       });
 
       // Store project and file information
@@ -46,14 +115,14 @@ const Index = () => {
         JSON.stringify({
           projectId: project.id,
           projectName: project.name,
-          fileName: selectedFile.file.name,
-          fileSize: selectedFile.file.size,
-          lastModified: selectedFile.file.lastModified,
+          fileName: fileToUse!.file.name,
+          fileSize: fileToUse!.file.size,
+          lastModified: fileToUse!.file.lastModified,
         })
       );
 
       // Store the actual file content
-      sessionStorage.setItem("contractFile", selectedFile.content);
+      sessionStorage.setItem("contractFile", fileToUse!.content);
 
       toast.success("Project created successfully!");
       navigate("/analysis");
@@ -124,16 +193,75 @@ const Index = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-lg font-semibold">Upload Contract</Label>
-            <FileUpload onFileSelect={handleFileSelect} />
-          </div>
+          <Tabs defaultValue="upload" onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="search">Search Token</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="upload" className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-lg font-semibold">Upload Contract</Label>
+                <FileUpload onFileSelect={handleFileSelect} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="search" className="space-y-4">
+                 <div className="flex gap-2">
+                    <Input 
+                        placeholder="Search token due name or symbol (e.g. USDC, Uniswap)" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleTokenSearch()}
+                    />
+                    <Button onClick={handleTokenSearch} disabled={isSearching} variant="outline" size="icon">
+                        {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
+                 </div>
+                 
+                 {searchResults.length > 0 && (
+                     <div className="grid gap-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-background/50">
+                        {searchResults.map(token => (
+                            <div 
+                                key={token.id} 
+                                className={`p-2 cursor-pointer hover:bg-accent rounded flex items-center gap-3 transition-colors ${selectedToken?.id === token.id ? 'bg-primary/20 border-primary border' : ''}`}
+                                onClick={() => handleSelectToken(token)}
+                            >
+                                {token.thumb && <img src={token.thumb} className="w-8 h-8 rounded-full" alt={token.symbol} />}
+                                <div>
+                                    <div className="font-bold">{token.symbol.toUpperCase()}</div>
+                                    <div className="text-xs text-muted-foreground">{token.name}</div>
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                 )}
+                 
+                 {selectedToken && (
+                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                        <Label>Select Chain</Label>
+                        <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select chain" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(tokenPlatforms).map(([chain, address]) => (
+                                    <SelectItem key={chain} value={chain}>
+                                        <span className="capitalize">{chain}</span> <span className="text-muted-foreground text-xs ml-2">({address.substring(0, 8)}...{address.substring(address.length-6)})</span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                     </div>
+                 )}
+            </TabsContent>
+          </Tabs>
 
           <Button
             onClick={handleAnalyze}
             size="lg"
             className="w-full h-14 text-lg font-semibold gradient-primary shadow-glow hover:shadow-glow transition-smooth"
-            disabled={!projectName.trim() || !selectedFile || isCreatingProject}
+            disabled={!projectName.trim() || isCreatingProject || (activeTab === "upload" ? !selectedFile : (!selectedToken || !selectedPlatform))}
           >
             {isCreatingProject ? (
               <>

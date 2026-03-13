@@ -31,7 +31,7 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
     
     try:
         llm = llm_client.get_instance()
-        logger.info(f"Got LLM instance for conversation handling")
+        print(f"Got LLM instance for conversation handling")
         
         # Build conversation context
         messages = []
@@ -51,12 +51,12 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
         
         prompt = f"Current code under discussion:\n```solidity\n{code}\n```\n\n{last_user_message}"
         
-        logger.info(f"Sending conversation prompt to LLM (history length: {len(conversation_history)})")
-        logger.debug(f"Last user message: {last_user_message[:100]}...")
+        print(f"Sending conversation prompt to LLM (history length: {len(conversation_history)})")
+        print(f"Last user message: {last_user_message}...")
         
         response = llm.invoke(prompt)
-        logger.info(f"Received conversation response from LLM")
-        logger.debug(f"Response content: {response.content[:200] if response.content else 'NONE'}...")
+        print(f"Received conversation response from LLM")
+        print(f"Response content: {response.content if response.content else 'NONE'}...")
         
         answer = response.content.strip() if response.content else ""
         
@@ -82,7 +82,7 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
         updated_history.append({"role": "assistant", "content": answer})
         state["conversation_history"] = updated_history
         
-        logger.info("Conversation handled successfully")
+        print("Conversation handled successfully")
         
     except Exception as e:
         logger.error(f"Error in conversation handling: {e}", exc_info=True)
