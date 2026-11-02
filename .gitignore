@@ -174,3 +174,10 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+ge-sc-artifacts
+output
+
+!web_react/src/lib
+
+storage/

@@ -18,3 +18,20 @@ typer
 rootutils
 nltk
 tqdm
+
+# Web framework
+fastapi
+uvicorn[standard]
+
+# Database
+motor
+pymongo
+
+# Authentication & Security
+python-jose[cryptography]
+PyJWT
+passlib[bcrypt]
+bcrypt
+
+# Email validation
+email-validator
