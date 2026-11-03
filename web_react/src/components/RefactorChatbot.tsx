@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { refactorBotService, ConversationMessage, RefactoringSuggestion } from "@/services/refactorbot";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useT } from "@/i18n";
 
 interface VulnerableFunction {
   function_name: string;
@@ -21,6 +22,7 @@ interface RefactorChatbotProps {
 }
 
 export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) => {
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFunction, setSelectedFunction] = useState<VulnerableFunction | null>(null);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
@@ -98,10 +100,10 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
         }
       }));
 
-      toast.success("Analysis complete!");
+      toast.success(t("Analysis complete"));
     } catch (error) {
       console.error("Error getting refactoring advice:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to analyze function");
+      toast.error(error instanceof Error ? error.message : t("Failed to analyze function"));
     } finally {
       setIsLoading(false);
     }
@@ -156,7 +158,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
 
     } catch (error) {
       console.error("Error continuing conversation:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send message");
+      toast.error(error instanceof Error ? error.message : t("Failed to send message"));
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +181,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
       }
     } catch (error) {
       console.error("Error validating code:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to validate code");
+      toast.error(error instanceof Error ? error.message : t("Failed to validate code"));
     } finally {
       setIsLoading(false);
     }
@@ -203,25 +205,25 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
           onClick={() => setIsOpen(true)}
           variant="secondary"
           className="fixed bottom-6 right-6 z-50 h-12 gap-2 px-5"
-          aria-label="Open Refactor Assistant"
+          aria-label={t("Open Refactor Assistant")}
         >
           <MessageSquare className="h-4 w-4" />
-          Refactor Assistant
+          {t("Refactor Assistant")}
           <span className="measured rounded-sm bg-bad-soft px-1.5 text-xs text-bad">{vulnerableOnly.length}</span>
         </Button>
       )}
 
       {isOpen && (
         <section
-          aria-label="Refactor Assistant"
+          aria-label={t("Refactor Assistant")}
           className="land fixed inset-x-3 bottom-3 top-20 z-50 flex flex-col overflow-hidden rounded-lg border border-rule-2 bg-paper-2 sm:inset-x-auto sm:right-6 sm:top-auto sm:h-[min(700px,calc(100dvh-7rem))] sm:w-[min(800px,calc(100%-3rem))]"
         >
           <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <h3 className="text-base">Refactor Assistant</h3>
+              <h3 className="text-base">{t("Refactor Assistant")}</h3>
             </div>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsOpen(false)} aria-label="Close Refactor Assistant">
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsOpen(false)} aria-label={t("Close Refactor Assistant")}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -232,8 +234,8 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
               onValueChange={handleSelectFunction}
               disabled={isLoading}
             >
-              <SelectTrigger aria-label="Vulnerable function">
-                <SelectValue placeholder="Select a vulnerable function to analyze…" />
+              <SelectTrigger aria-label={t("Vulnerable function")}>
+                <SelectValue placeholder={t("Select a vulnerable function to analyze…")} />
               </SelectTrigger>
               <SelectContent>
                 {vulnerableOnly.map((func) => (
@@ -252,13 +254,13 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
           <ScrollArea className="flex-1 px-4 py-4">
             {!selectedFunction ? (
               <div className="flex h-full flex-col items-start justify-center gap-2 py-16 text-sm text-muted-foreground">
-                <p className="text-ink-2">Select a vulnerable function to start analysis</p>
-                <p>{vulnerableOnly.length} flagged in this contract.</p>
+                <p className="text-ink-2">{t("Select a vulnerable function to start analysis")}</p>
+                <p>{t("{n} flagged in this contract.", { n: vulnerableOnly.length })}</p>
               </div>
             ) : (
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs text-muted-foreground">Analyzing</p>
+                  <p className="text-xs text-muted-foreground">{t("Analyzing")}</p>
                   <p className="code-text mt-1 break-all text-sm text-ink">{selectedFunction.function_name}</p>
                   <pre className="code-text well mt-2 overflow-x-auto p-3 text-xs text-ink-2">
                     {selectedFunction.function_code.slice(0, 200)}…
@@ -300,10 +302,10 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                 {suggestedCode && (
                   <div className="rounded-md bg-ok-soft p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-xs text-ok">Suggested Refactored Code</p>
+                      <p className="text-xs text-ok">{t("Suggested Refactored Code")}</p>
                       <Button size="sm" variant="outline" onClick={handleValidateCode} disabled={isLoading}>
                         <CheckCircle className="h-3 w-3" />
-                        Validate
+                        {t("Validate")}
                       </Button>
                     </div>
                     <pre className="code-text overflow-x-auto rounded-sm bg-paper p-3 text-xs text-ink-2">
@@ -327,7 +329,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                             rel="noopener noreferrer"
                             className="mt-1 inline-block text-xs text-cool underline decoration-rule-2 underline-offset-4 hover:text-signal"
                           >
-                            Read the reference
+                            {t("Read the reference")}
                           </a>
                         )}
                       </li>
@@ -338,7 +340,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                 {isLoading && (
                   <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
                     <Loader2 className="keep-motion h-4 w-4 animate-spin" aria-hidden="true" />
-                    Thinking…
+                    {t("Thinking…")}
                   </p>
                 )}
               </div>
@@ -349,8 +351,8 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
             <div className="border-t border-rule p-3">
               <div className="flex items-end gap-2">
                 <Textarea
-                  aria-label="Follow-up question"
-                  placeholder="Ask follow-up questions…"
+                  aria-label={t("Follow-up question")}
+                  placeholder={t("Ask follow-up questions…")}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -366,7 +368,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                   size="icon"
                   onClick={handleSendMessage}
                   disabled={isLoading || !inputMessage.trim()}
-                  aria-label="Send"
+                  aria-label={t("Send")}
                   aria-busy={isLoading}
                 >
                   {isLoading ? <Loader2 className="keep-motion h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

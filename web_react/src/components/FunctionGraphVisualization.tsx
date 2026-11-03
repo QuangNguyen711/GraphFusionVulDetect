@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 interface FunctionNode {
   id: string;
@@ -22,6 +23,7 @@ export const FunctionGraphVisualization = ({
   fcgEdges, 
   funcVulnerabilityPredictions 
 }: FunctionGraphProps) => {
+  const t = useT();
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<FunctionNode | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -112,7 +114,7 @@ export const FunctionGraphVisualization = ({
       .attr("style", (_d, i) => `--i: ${Math.min(i, 12)}`)
       .attr("tabindex", 0)
       .attr("role", "button")
-      .attr("aria-label", (d) => `${d.function_name}, ${d.prediction === 1 ? "vulnerable" : "safe"}, confidence ${d.confidence}`)
+      .attr("aria-label", (d) => `${d.function_name}, ${d.prediction === 1 ? t("Vulnerable") : t("Safe")}, ${t("Confidence")} ${d.confidence}`)
       .on("keydown", (event: KeyboardEvent, d) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -145,8 +147,8 @@ export const FunctionGraphVisualization = ({
           .attr("class", "fcg-tip")
           .html(`
             <div><b>${d.function_name}</b></div>
-            <div>Status: ${d.prediction === 1 ? 'Vulnerable' : 'Safe'}</div>
-            <div>Confidence: ${d.confidence}</div>
+            <div>${t("Status")}: ${d.prediction === 1 ? t("Vulnerable") : t("Safe")}</div>
+            <div>${t("Confidence")}: ${d.confidence}</div>
           `);
 
         const [x, y] = d3.pointer(event, document.body);
@@ -214,7 +216,8 @@ export const FunctionGraphVisualization = ({
       simulation.stop();
       d3.selectAll(".fcg-tip").remove();
     };
-  }, [fcgEdges, funcVulnerabilityPredictions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fcgEdges, funcVulnerabilityPredictions, t.language]);
 
   const handleZoomIn = () => {
     if (svgRef.current && zoomRef.current) {
@@ -249,15 +252,15 @@ export const FunctionGraphVisualization = ({
     <div>
       <figure className="panel overflow-hidden">
         <figcaption className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3">
-          <h4 className="text-base">Function Call Graph</h4>
+          <h4 className="text-base">{t("Function Call Graph")}</h4>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn} aria-label="Zoom in">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn} aria-label={t("Zoom in")}>
               <ZoomIn />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut} aria-label="Zoom out">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut} aria-label={t("Zoom out")}>
               <ZoomOut />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReset} aria-label="Reset view">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReset} aria-label={t("Reset view")}>
               <RotateCcw />
             </Button>
           </div>
@@ -267,21 +270,21 @@ export const FunctionGraphVisualization = ({
           ref={svgRef}
           className="fcg"
           role="group"
-          aria-label={`Function call graph: ${funcVulnerabilityPredictions.length} functions, ${vulnerableCount} vulnerable`}
+          aria-label={t("Function call graph: {n} functions, {k} vulnerable", { n: funcVulnerabilityPredictions.length, k: vulnerableCount })}
         />
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-rule px-4 py-3 text-sm text-muted-foreground">
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full border border-bad bg-bad-soft" aria-hidden="true" />
-            Vulnerable Functions
+            {t("Vulnerable Functions")}
           </span>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full border border-ok bg-ok-soft" aria-hidden="true" />
-            Safe Functions
+            {t("Safe Functions")}
           </span>
-          <span className="sm:ml-auto">Click a node to view its code</span>
-          <span>Drag to move</span>
-          <span>Scroll to zoom</span>
+          <span className="sm:ml-auto">{t("Click a node to view its code")}</span>
+          <span>{t("Drag to move")}</span>
+          <span>{t("Scroll to zoom")}</span>
         </div>
       </figure>
 
@@ -291,7 +294,7 @@ export const FunctionGraphVisualization = ({
             <DialogTitle className="flex flex-wrap items-center gap-3">
               <span className="code-text min-w-0 break-all text-base">{selectedNode?.function_name}</span>
               <Badge variant={selectedNode?.prediction === 1 ? "destructive" : "ok"}>
-                {selectedNode?.prediction === 1 ? "Vulnerable" : "Safe"}
+                {selectedNode?.prediction === 1 ? t("Vulnerable") : t("Safe")}
               </Badge>
             </DialogTitle>
           </DialogHeader>
@@ -299,19 +302,19 @@ export const FunctionGraphVisualization = ({
           {selectedNode && (
             <div className="space-y-4">
               <div>
-                <h4 className="mb-2 text-sm text-muted-foreground">Function Code</h4>
+                <h4 className="mb-2 text-sm text-muted-foreground">{t("Function Code")}</h4>
                 <pre className="code-text well max-h-96 overflow-auto p-4 text-sm leading-relaxed text-ink-2">{selectedNode.function_code}</pre>
               </div>
 
               <dl className="grid grid-cols-2 border-t border-rule pt-4 text-sm">
                 <div>
-                  <dt className="text-muted-foreground">Security Status</dt>
+                  <dt className="text-muted-foreground">{t("Security Status")}</dt>
                   <dd className={`mt-1 ${selectedNode.prediction === 1 ? "text-bad" : "text-ok"}`}>
-                    {selectedNode.prediction === 1 ? "Vulnerable" : "Safe"}
+                    {selectedNode.prediction === 1 ? t("Vulnerable") : t("Safe")}
                   </dd>
                 </div>
                 <div className="border-l border-rule pl-4">
-                  <dt className="text-muted-foreground">Confidence</dt>
+                  <dt className="text-muted-foreground">{t("Confidence")}</dt>
                   <dd className="measured mt-1 text-cool">{selectedNode.confidence}</dd>
                 </div>
               </dl>

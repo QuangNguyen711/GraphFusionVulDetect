@@ -11,9 +11,11 @@ import { FileUpload } from "@/components/FileUpload";
 import { TruncatedText } from "@/components/TruncatedText";
 import { projectService, Project, AnalysisSession } from "@/services/project";
 import { toast } from "sonner";
+import { useT } from "@/i18n";
 
 const ProjectAnalysis = () => {
   const navigate = useNavigate();
+  const t = useT();
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [analysisSessions, setAnalysisSessions] = useState<AnalysisSession[]>([]);
@@ -49,7 +51,7 @@ const ProjectAnalysis = () => {
       }
     } catch (error) {
       console.error("Error loading project data:", error);
-      toast.error("Failed to load project data");
+      toast.error(t("Failed to load project data"));
       navigate("/project");
     } finally {
       setLoading(false);
@@ -71,7 +73,7 @@ const ProjectAnalysis = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(t.locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -86,7 +88,7 @@ const ProjectAnalysis = () => {
 
   const handleStartNewAnalysis = async () => {
     if (!selectedFile || !project) {
-      toast.error("Please select a file");
+      toast.error(t("Choose a .sol file."));
       return;
     }
 
@@ -112,11 +114,11 @@ const ProjectAnalysis = () => {
 
       sessionStorage.setItem("contractFile", selectedFile.content);
 
-      toast.success("Analysis started!");
+      toast.success(t("Analysis started"));
       navigate("/analysis/live");
     } catch (error) {
       console.error("Error starting analysis:", error);
-      toast.error("Failed to start analysis");
+      toast.error(t("Failed to start analysis"));
     } finally {
       setIsAnalyzing(false);
     }
@@ -146,7 +148,7 @@ const ProjectAnalysis = () => {
           <span className="block h-4 w-32 animate-pulse rounded-sm bg-paper-3" />
           <span className="mt-6 block h-10 w-2/3 max-w-xl animate-pulse rounded-sm bg-paper-3" />
           <span className="mt-10 block h-64 animate-pulse rounded-md bg-paper-2" />
-          <span className="sr-only">Loading project…</span>
+          <span className="sr-only">{t("Loading project…")}</span>
         </main>
       </div>
     );
@@ -157,9 +159,9 @@ const ProjectAnalysis = () => {
       <div className="min-h-dvh bg-background">
         <Header />
         <main id="main" className="shell py-16">
-          <h1 className="text-3xl">Project not found</h1>
+          <h1 className="text-3xl">{t("Project not found")}</h1>
           <Button onClick={handleBackToProjects} variant="outline" className="mt-6">
-            Back to Projects
+            {t("Back to Projects")}
           </Button>
         </main>
       </div>
@@ -173,7 +175,7 @@ const ProjectAnalysis = () => {
       <main id="main" className="shell py-10 lg:py-12">
         <Button variant="link" onClick={handleBackToProjects} className="gap-2 text-sm text-ink-2">
           <ArrowLeft className="h-4 w-4" />
-          Back to Projects
+          {t("Back to Projects")}
         </Button>
 
         <div className="mt-6 flex flex-wrap items-start justify-between gap-6 border-b border-rule pb-8">
@@ -183,7 +185,7 @@ const ProjectAnalysis = () => {
                 <TruncatedText text={project.name} maxLines={2} />
               </h1>
               <Badge variant={getStatusVariant(project.status)}>
-                <span className="capitalize">{project.status}</span>
+                <span>{t(project.status.charAt(0).toUpperCase() + project.status.slice(1))}</span>
               </Badge>
             </div>
             {project.description && (
@@ -191,15 +193,15 @@ const ProjectAnalysis = () => {
             )}
             <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-sm">
               <div>
-                <dt className="text-muted-foreground">Files</dt>
+                <dt className="text-muted-foreground">{t("Files")}</dt>
                 <dd className="measured mt-1 text-lg text-ink">{project.files.length}</dd>
               </div>
               <div className="border-l border-rule pl-8">
-                <dt className="text-muted-foreground">Analyses</dt>
+                <dt className="text-muted-foreground">{t("Analyses")}</dt>
                 <dd className="measured mt-1 text-lg text-ink">{project.analysis_count}</dd>
               </div>
               <div className="border-l border-rule pl-8">
-                <dt className="text-muted-foreground">Created</dt>
+                <dt className="text-muted-foreground">{t("Created")}</dt>
                 <dd className="measured mt-1 text-lg text-ink">{formatDate(project.created_at)}</dd>
               </div>
             </dl>
@@ -207,13 +209,13 @@ const ProjectAnalysis = () => {
 
           <Button onClick={() => setShowNewAnalysis(!showNewAnalysis)} aria-expanded={showNewAnalysis}>
             <Upload className="h-4 w-4" />
-            {showNewAnalysis ? "Hide Upload" : "New Analysis"}
+            {showNewAnalysis ? t("Hide Upload") : t("New Analysis")}
           </Button>
         </div>
 
         {showNewAnalysis && (
           <section className="land border-b border-rule py-8" aria-labelledby="new-run-head">
-            <h2 id="new-run-head" className="text-xl">Start New Analysis</h2>
+            <h2 id="new-run-head" className="text-xl">{t("Start New Analysis")}</h2>
             <div className="mt-5 max-w-2xl space-y-4">
               <FileUpload onFileSelect={handleFileSelect} />
               {selectedFile && (
@@ -221,12 +223,12 @@ const ProjectAnalysis = () => {
                   {isAnalyzing ? (
                     <>
                       <Activity className="keep-motion h-4 w-4 animate-spin" />
-                      Starting Analysis…
+                      {t("Starting Analysis…")}
                     </>
                   ) : (
                     <>
                       <Play className="h-4 w-4" />
-                      Start Analysis
+                      {t("Start Analysis")}
                     </>
                   )}
                 </Button>
@@ -237,10 +239,10 @@ const ProjectAnalysis = () => {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] lg:gap-12">
           <aside aria-labelledby="history-head">
-            <h2 id="history-head" className="text-sm text-muted-foreground">Analysis History</h2>
+            <h2 id="history-head" className="text-sm text-muted-foreground">{t("Analysis History")}</h2>
             {analysisSessions.length === 0 ? (
               <p className="mt-4 text-sm text-ink-2">
-                No analysis sessions yet. Use New Analysis to scan a file.
+                {t("No analysis sessions yet. Use New Analysis to scan a file.")}
               </p>
             ) : (
               <ol className="mt-4 border-l border-rule-2">
@@ -260,7 +262,7 @@ const ProjectAnalysis = () => {
                           <TruncatedText text={session.filename} maxLines={1} className="code-text text-sm text-ink" showTooltip={false} />
                           {session.status !== "completed" && (
                             <Badge variant={getStatusVariant(session.status)}>
-                              <span className="capitalize">{session.status}</span>
+                              <span>{t(session.status.charAt(0).toUpperCase() + session.status.slice(1))}</span>
                             </Badge>
                           )}
                         </span>
@@ -278,10 +280,10 @@ const ProjectAnalysis = () => {
               <>
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-sm text-muted-foreground">
-                    Analysis Results: <span className="code-text text-ink">{selectedSession.filename}</span>
+                    {t("Analysis Results:")} <span className="code-text text-ink">{selectedSession.filename}</span>
                   </h2>
                   <Badge variant={getStatusVariant(selectedSession.status)}>
-                    <span className="capitalize">{selectedSession.status}</span>
+                    <span>{t(selectedSession.status.charAt(0).toUpperCase() + selectedSession.status.slice(1))}</span>
                   </Badge>
                 </div>
 
@@ -289,7 +291,7 @@ const ProjectAnalysis = () => {
                   <div role="alert" className="flex items-start gap-3 rounded-md bg-bad-soft p-4">
                     <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-bad" aria-hidden="true" />
                     <div>
-                      <h3 className="text-base text-bad">Analysis Error</h3>
+                      <h3 className="text-base text-bad">{t("Analysis Error")}</h3>
                       <p className="mt-1 text-sm text-ink-2">{selectedSession.error_message}</p>
                     </div>
                   </div>
@@ -304,7 +306,7 @@ const ProjectAnalysis = () => {
                 )}
               </>
             ) : (
-              <p className="text-ink-2">Pick a session on the left, or start a new analysis.</p>
+              <p className="text-ink-2">{t("Pick a session on the left, or start a new analysis.")}</p>
             )}
           </div>
         </div>

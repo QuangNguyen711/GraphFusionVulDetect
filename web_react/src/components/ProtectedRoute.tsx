@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useT } from "@/i18n";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const t = useT();
   const location = useLocation();
 
   if (isLoading) {
@@ -16,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       <div className="flex min-h-dvh items-center justify-center bg-background" role="status">
         <p className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="keep-motion h-4 w-4 animate-spin text-signal" aria-hidden="true" />
-          Đang kiểm tra đăng nhập…
+          {t("Checking your session…")}
         </p>
       </div>
     );

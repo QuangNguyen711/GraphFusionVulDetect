@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { translate } from "@/i18n";
 
 // Analysis related types
 export interface AnalysisRequest {
@@ -206,7 +207,7 @@ export class AnalysisService {
     if (file.size > maxSize) {
       return {
         valid: false,
-        error: 'File quá lớn. Kích thước tối đa là 10MB.',
+        error: translate('That file is over 10 MB. Upload a smaller .sol file.'),
       };
     }
 
@@ -215,7 +216,7 @@ export class AnalysisService {
     if (!supportedTypes.includes(fileExtension)) {
       return {
         valid: false,
-        error: `Loại file không được hỗ trợ. Chỉ chấp nhận: ${supportedTypes.join(', ')}`,
+        error: translate('That file type is not supported. Use {types}.', { types: supportedTypes.join(', ') }),
       };
     }
 

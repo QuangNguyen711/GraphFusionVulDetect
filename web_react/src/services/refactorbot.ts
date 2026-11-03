@@ -1,5 +1,6 @@
 // RefactorBot API Service
 import { createAuthHeaders } from './api';
+import { readPreferences } from "@/lib/preferences";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -48,7 +49,8 @@ class RefactorBotService {
       headers: createAuthHeaders(),
       body: JSON.stringify({
         code,
-        issue_description: issueDescription
+        issue_description: issueDescription,
+        language: readPreferences().language
       })
     });
 
@@ -72,7 +74,8 @@ class RefactorBotService {
       headers: createAuthHeaders(),
       body: JSON.stringify({
         code,
-        conversation_history: conversationHistory
+        conversation_history: conversationHistory,
+        language: readPreferences().language
       })
     });
 

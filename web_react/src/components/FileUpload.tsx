@@ -3,6 +3,7 @@ import { Upload, File, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AnalysisService, { FileInfo } from "@/services/analysis";
+import { useT } from "@/i18n";
 
 interface FileUploadProps {
   onFileSelect: (file: File, content: string) => void;
@@ -11,6 +12,7 @@ interface FileUploadProps {
 }
 
 export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }: FileUploadProps) => {
+  const t = useT();
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -153,20 +155,20 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
           <span className="min-w-0">
             <span className={`block break-all text-base ${selectedFile ? "code-text text-sm text-ink" : "text-ink"}`}>
               {uploadedFileInfo
-                ? `Uploaded: ${uploadedFileInfo.filename}`
+                ? t("Uploaded: {f}", { f: uploadedFileInfo.filename })
                 : selectedFile
                 ? selectedFile.name
-                : "Upload Smart Contract"}
+                : t("Upload Smart Contract")}
             </span>
             <span className="mt-1 block text-sm text-muted-foreground">
               {uploadedFileInfo
-                ? "File uploaded successfully. Ready for analysis."
+                ? t("File uploaded successfully. Ready for analysis.")
                 : selectedFile
-                ? `${(selectedFile.size / 1024).toFixed(1)} KB. Drop another file to replace it.`
-                : "Drag and drop your smart contract file here, or click to browse"}
+                ? t("{s} KB. Drop another file to replace it.", { s: (selectedFile.size / 1024).toFixed(1) })
+                : t("Drag and drop your smart contract file here, or click to browse")}
             </span>
             <span className="mt-2 block text-xs text-muted-foreground">
-              {supportedTypes.join(', ')}, max 10&nbsp;MB
+              {t("{types}, max 10 MB", { types: supportedTypes.join(', ') })}
             </span>
           </span>
         </label>
@@ -183,7 +185,7 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
       {isUploading && (
         <div className="space-y-2" role="status">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progress</span>
+            <span>{t("Progress")}</span>
             <span className="measured">{uploadProgress}%</span>
           </div>
           <Progress value={uploadProgress} className="h-1.5" />
@@ -199,9 +201,9 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
 
       {uploadedFileInfo && (
         <dl className="grid grid-cols-3 gap-3 rounded-md bg-ok-soft p-3 text-sm">
-          <div><dt className="text-muted-foreground">File</dt><dd className="code-text break-all text-xs text-ink">{uploadedFileInfo.filename}</dd></div>
-          <div><dt className="text-muted-foreground">Size</dt><dd className="measured text-ink">{(uploadedFileInfo.file_size / 1024).toFixed(1)} KB</dd></div>
-          <div><dt className="text-muted-foreground">Type</dt><dd className="text-ink">{uploadedFileInfo.file_type}</dd></div>
+          <div><dt className="text-muted-foreground">{t("File")}</dt><dd className="code-text break-all text-xs text-ink">{uploadedFileInfo.filename}</dd></div>
+          <div><dt className="text-muted-foreground">{t("Size")}</dt><dd className="measured text-ink">{(uploadedFileInfo.file_size / 1024).toFixed(1)} KB</dd></div>
+          <div><dt className="text-muted-foreground">{t("Type")}</dt><dd className="text-ink">{uploadedFileInfo.file_type}</dd></div>
         </dl>
       )}
     </div>
