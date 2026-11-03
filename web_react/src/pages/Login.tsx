@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/AuthLayout';
+import { readPreferences } from '@/lib/preferences';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from "@/i18n";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,28 +25,28 @@ const Login = () => {
     setError('');
 
     if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ email và mật khẩu');
+      setError(t('Enter your email and password.'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError(t('The password needs at least 6 characters.'));
       return;
     }
 
     const success = await login(email, password);
     
     if (success) {
-      toast.success('Đăng nhập thành công!');
-      navigate('/analysis');
+      toast.success(t('Signed in'));
+      navigate(readPreferences().startPage);
     } else {
-      setError('Email hoặc mật khẩu không đúng');
-      toast.error('Đăng nhập thất bại');
+      setError(t('That email and password do not match an account.'));
+      toast.error(t('Sign-in failed'));
     }
   };
 
   return (
-    <AuthLayout title="Đăng nhập" description="Nhập thông tin đăng nhập để truy cập hệ thống">
+    <AuthLayout title={t("Sign in")} description={t("Use your account to open your projects and analyses.")}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -52,7 +55,7 @@ const Login = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("Email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,12 +68,12 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password">{t("Password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
+                  placeholder={t("At least 6 characters")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
@@ -82,7 +85,7 @@ const Login = () => {
                   size="sm"
                   className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  aria-label={showPassword ? t("Hide password") : t("Show password")}
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -102,21 +105,21 @@ const Login = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="keep-motion h-4 w-4 animate-spin" />
-                  Đang đăng nhập…
+                  {t("Signing in…")}
                 </>
               ) : (
-                'Đăng nhập'
+                t('Sign in')
               )}
             </Button>
 
             <div className="border-t border-rule pt-5">
               <p className="text-sm text-muted-foreground">
-                Chưa có tài khoản?{' '}
+                {t('No account yet?')}{' '}
                 <Link
                   to="/register"
                   className="text-ink underline decoration-rule-2 underline-offset-4 transition-colors duration-200 hover:text-signal hover:decoration-signal"
                 >
-                  Đăng ký ngay
+                  {t("Create one")}
                 </Link>
               </p>
             </div>

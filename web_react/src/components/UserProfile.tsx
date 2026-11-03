@@ -13,20 +13,26 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Settings, LogOut, Shield, Clock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import UserProfileDialog from './UserProfileDialog';
+import SettingsDialog from './SettingsDialog';
+import SecurityDialog from './SecurityDialog';
+import { useT } from "@/i18n";
 
 const UserProfile = () => {
   const { user, logout } = useAuth();
+  const t = useT();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
 
   if (!user) return null;
 
   const handleLogout = async () => {
     try {
       await logout();
-      toast.success('Đã đăng xuất thành công');
+      toast.success(t('Signed out'));
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Có lỗi xảy ra khi đăng xuất');
+      toast.error(t('Sign-out failed'));
     }
   };
 
@@ -40,10 +46,10 @@ const UserProfile = () => {
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Chưa cập nhật';
+    if (!dateString) return t('Not set');
     
     try {
-      return new Date(dateString).toLocaleDateString('vi-VN', {
+      return new Date(dateString).toLocaleDateString(t.locale, {
         day: '2-digit',
         month: '2-digit', 
         year: 'numeric',
@@ -51,7 +57,7 @@ const UserProfile = () => {
         minute: '2-digit'
       });
     } catch (error) {
-      return 'Không xác định';
+      return t('Unknown');
     }
   };
 
@@ -60,7 +66,7 @@ const UserProfile = () => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          aria-label="Account"
+          aria-label={t("Account")}
           className="relative h-10 w-10 rounded-full p-0"
         >
           <Avatar className="h-10 w-10">
@@ -104,7 +110,7 @@ const UserProfile = () => {
             {user.last_login && (
               <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                <span>Lần cuối: {formatDate(user.last_login)}</span>
+                <span>{t('Last sign-in: {d}', { d: formatDate(user.last_login) })}</span>
               </div>
             )}
           </div>
@@ -117,17 +123,17 @@ const UserProfile = () => {
           onClick={() => setShowProfileDialog(true)}
         >
           <User className="mr-2 h-4 w-4" />
-          <span>Thông tin cá nhân</span>
+          <span>{t('Profile')}</span>
         </DropdownMenuItem>
         
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer" onClick={() => setShowSettings(true)}>
           <Settings className="mr-2 h-4 w-4" />
-          <span>Cài đặt</span>
+          <span>{t('Settings')}</span>
         </DropdownMenuItem>
         
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer" onClick={() => setShowSecurity(true)}>
           <Shield className="mr-2 h-4 w-4" />
-          <span>Bảo mật</span>
+          <span>{t('Security')}</span>
         </DropdownMenuItem>
         
         <DropdownMenuSeparator />
@@ -137,7 +143,7 @@ const UserProfile = () => {
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Đăng xuất</span>
+          <span>{t('Sign out')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
 
@@ -145,6 +151,8 @@ const UserProfile = () => {
         open={showProfileDialog} 
         onOpenChange={setShowProfileDialog}
       />
+      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+      <SecurityDialog open={showSecurity} onOpenChange={setShowSecurity} />
     </DropdownMenu>
   );
 };

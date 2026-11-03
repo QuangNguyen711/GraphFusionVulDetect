@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AuthService, { UserProfile } from '@/services/auth';
 import { toast } from 'sonner';
+import { translate } from "@/i18n";
 
 interface User {
   id: string;
@@ -23,6 +24,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<string | null>;
+  logoutAll: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -115,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       
       // Show user-friendly error message
-      const errorMessage = error.message || 'Đăng nhập thất bại';
+      const errorMessage = error.message || translate('Sign-in failed');
       toast.error(errorMessage);
       return false;
     }
@@ -143,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!loginSuccess) {
         // If auto-login fails, still consider registration successful
         setIsLoading(false);
-        toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
+        toast.success(translate('Account created. Sign in to continue.'));
         return true;
       }
 
@@ -154,7 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       
       // Show user-friendly error message
-      const errorMessage = error.message || 'Đăng ký thất bại';
+      const errorMessage = error.message || translate('Sign-up failed');
       toast.error(errorMessage);
       return false;
     }
@@ -191,13 +194,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = mapUserProfileToUser(updatedProfile);
       setUser(userData);
       AuthService.storeUser(updatedProfile);
-      toast.success('Cập nhật thông tin thành công!');
+      toast.success(translate('Profile updated'));
       return true;
     } catch (error: any) {
       console.error('Update profile error:', error);
-      const errorMessage = error.message || 'Cập nhật thông tin thất bại';
+      const errorMessage = error.message || translate('Profile update failed');
       toast.error(errorMessage);
       return false;
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<string | null> => {
+    try {
+      await AuthService.changePassword(currentPassword, newPassword);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : translate('Password change failed');
+    }
+  };
+
+  const logoutAll = async (): Promise<void> => {
+    try {
+      await AuthService.logoutAll();
+    } finally {
+      setUser(null);
+      window.location.href = '/login';
     }
   };
 
@@ -210,6 +231,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     refreshUser,
     updateProfile,
+    changePassword,
+    logoutAll,
   };
 
   return (
