@@ -1,5 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
+import { usePreferences } from "@/lib/preferences";
+import { useT } from "@/i18n";
 
 export const STAGES = [
   { node: "convert_to_fcg", title: "Function Call Graph Generation", note: "Builds the call graph of every function in the contract." },
@@ -56,10 +58,14 @@ interface PipelineTrailProps {
 }
 
 export const PipelineTrail = ({ results = [], isStreaming = false, renderDetail, preview = false }: PipelineTrailProps) => {
+  const t = useT();
   const states = getStageStates(results, isStreaming);
   const settled = states.filter((s) => s === "done" || s === "skipped").length;
   const byNode = new Map(results.map((r) => [r.node, r]));
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const { collapseFinishedSteps } = usePreferences();
+  const [collapsed, setCollapsed] = useState<Set<string>>(() =>
+    collapseFinishedSteps && !isStreaming ? new Set(results.map((r) => r.node)) : new Set(),
+  );
   const collapsible = Boolean(renderDetail) && !preview;
   const withDetail = STAGES.filter((stage) => byNode.has(stage.node)).map((stage) => stage.node);
   const allCollapsed = withDetail.length > 0 && withDetail.every((node) => collapsed.has(node));
@@ -81,7 +87,7 @@ export const PipelineTrail = ({ results = [], isStreaming = false, renderDetail,
             className="trail__all"
             onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(withDetail))}
           >
-            {allCollapsed ? "Expand all steps" : "Collapse all steps"}
+            {allCollapsed ? t("Expand all steps") : t("Collapse all steps")}
           </button>
         </div>
       )}
@@ -109,21 +115,22 @@ export const PipelineTrail = ({ results = [], isStreaming = false, renderDetail,
                       aria-controls={`stage-${stage.node}`}
                       onClick={() => toggle(stage.node)}
                     >
-                      <span className="stage__title">{stage.title}</span>
+                      <span className="stage__title">{t(stage.title)}</span>
                       <ChevronDown className="stage__chevron h-4 w-4" aria-hidden="true" />
                     </button>
                   </h3>
                 ) : (
-                  <h3 className="stage__title text-base">{stage.title}</h3>
+                  <h3 className="stage__title text-base">{t(stage.title)}</h3>
                 )}
                 <code className="code-text text-xs text-muted-foreground">{stage.node}</code>
                 {!preview && (
                   <span className="ml-auto text-sm text-muted-foreground">
-                    {time ? <time className="measured text-cool" dateTime={result?.timestamp}>{time}</time> : STATE_LABEL[state]}
+                    {time ? <time className="measured text-cool" dateTime={result?.timestamp}>{time}</time> : t(STATE_LABEL[state])}
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{stage.note}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t(stage.note)}</p>
+              {state === "running" && <span className="stage__progress keep-motion" aria-hidden="true" />}
               {renderDetail && result && (
                 <div id={`stage-${stage.node}`} className="land mt-5" hidden={collapsible && collapsed.has(stage.node)}>
                   {renderDetail(result)}

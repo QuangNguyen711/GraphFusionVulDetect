@@ -9,6 +9,7 @@ import { ContractVisualization } from "@/components/ContractVisualization";
 import { RefactorChatbot } from "@/components/RefactorChatbot";
 import { projectService } from "@/services/project";
 import { toast } from "sonner";
+import { useT } from "@/i18n";
 
 interface AnalysisData {
   status: "pending" | "analyzing" | "complete" | "error";
@@ -22,6 +23,7 @@ interface AnalysisData {
 
 const Analysis = () => {
   const navigate = useNavigate();
+  const t = useT();
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [streamingResults, setStreamingResults] = useState<any[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -51,7 +53,7 @@ const Analysis = () => {
     
     // Check if we have project information from the new flow
     if (!data.projectId) {
-      toast.error("Project information missing. Please start from the beginning.");
+      toast.error(t("Project information missing. Please start from the beginning."));
       navigate("/analysis");
       return;
     }
@@ -91,7 +93,7 @@ const Analysis = () => {
         if (done) {
           setIsStreaming(false);
           setAnalysisData(prev => prev ? { ...prev, status: "complete" } : null);
-          toast.success("Analysis completed successfully!");
+          toast.success(t("Analysis complete"));
           break;
         }
 
@@ -129,7 +131,7 @@ const Analysis = () => {
         error: errorMessage
       } : null);
       
-      toast.error(`Analysis failed: ${errorMessage}`);
+      toast.error(t("Analysis failed: {e}", { e: errorMessage }));
     }
   };
 
@@ -141,16 +143,16 @@ const Analysis = () => {
     const storedData = sessionStorage.getItem("contractAnalysis");
     if (storedData) {
       const data = JSON.parse(storedData);
-      if (data.isExistingProject) return "Project";
+      if (data.isExistingProject) return t("Project");
     }
-    return "Upload";
+    return t("Upload");
   })();
 
   const statusChip = {
-    pending: { variant: "outline" as const, label: "Pending" },
-    analyzing: { variant: "signal" as const, label: "Analyzing" },
-    complete: { variant: "secondary" as const, label: "Complete" },
-    error: { variant: "destructive" as const, label: "Error" },
+    pending: { variant: "outline" as const, label: t("Pending") },
+    analyzing: { variant: "signal" as const, label: t("Analyzing") },
+    complete: { variant: "secondary" as const, label: t("Complete") },
+    error: { variant: "destructive" as const, label: t("Error") },
   }[analysisData.status];
 
   return (
@@ -160,7 +162,7 @@ const Analysis = () => {
       <main id="main" className="shell py-10 lg:py-12">
         <Button variant="link" onClick={handleBack} className="gap-2 text-sm text-ink-2">
           <ArrowLeft className="h-4 w-4" />
-          Back to {backLabel}
+          {t("Back to {where}", { where: backLabel })}
         </Button>
 
         <div className="mt-6 flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-8">
@@ -169,7 +171,7 @@ const Analysis = () => {
             <p className="code-text mt-3 break-all text-sm text-ink-2">{analysisData.fileName}</p>
           </div>
           <p className="flex items-center gap-3 text-sm text-muted-foreground" role="status">
-            Analysis Status
+            {t("Analysis Status")}
             <Badge variant={statusChip.variant}>
               {isStreaming && <span className="stage__spin keep-motion h-2.5 w-2.5" aria-hidden="true" />}
               {statusChip.label}
@@ -182,15 +184,13 @@ const Analysis = () => {
             <div role="alert" className="flex items-start gap-3 rounded-md bg-bad-soft p-4">
               <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-bad" aria-hidden="true" />
               <div>
-                <h2 className="text-base text-bad">Analysis Error</h2>
+                <h2 className="text-base text-bad">{t("Analysis Error")}</h2>
                 <p className="mt-1 text-sm text-ink-2">{analysisData.error}</p>
               </div>
             </div>
           )}
 
-          {streamingResults.some((r) => r.node === "detect_vulnerability_src") && (
-            <ContractVisualization data={streamingResults} />
-          )}
+          <ContractVisualization data={streamingResults} isStreaming={isStreaming} />
 
           <StreamingResults results={streamingResults} isStreaming={isStreaming} />
         </div>

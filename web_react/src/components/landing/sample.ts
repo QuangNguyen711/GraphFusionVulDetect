@@ -33,3 +33,12 @@ export const SAMPLE_CONFIDENCE = "91.2";
 
 export type Layers = { ground: boolean; safe: boolean; flagged: boolean; edges: boolean };
 export const ALL_LAYERS: Layers = { ground: true, safe: true, flagged: true, edges: true };
+
+export const SAMPLE_SCAN = SAMPLE_FUNCTIONS.map((f) => ({
+  name: f.name,
+  vulnerable: f.vulnerable,
+  confidence: f.confidence,
+  size: f.code.length,
+  x: f.x,
+  z: f.z,
+}));

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,16 @@ import { FileUpload } from "@/components/FileUpload";
 import Header from "@/components/Header";
 import { Loader2, Search } from "lucide-react";
 import { PipelineTrail } from "@/components/Pipeline";
+import { PointScan } from "@/components/scan/PointScan";
+import { previewFromSource } from "@/components/scan/parseSolidity";
 import { toast } from "sonner";
 import { projectService } from "@/services/project";
 import { tokenService, TokenSearchResult } from "@/services/token";
+import { useT } from "@/i18n";
 
 const Index = () => {
   const navigate = useNavigate();
+  const t = useT();
   const [projectName, setProjectName] = useState("");
   const [selectedFile, setSelectedFile] = useState<{ file: File; content: string } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
@@ -44,7 +48,7 @@ const Index = () => {
         const results = await tokenService.searchTokens(searchQuery);
         setSearchResults(results);
     } catch (e) {
-        toast.error("Failed to search token");
+        toast.error(t("Failed to search token"));
     } finally {
         setIsSearching(false);
     }
@@ -59,13 +63,13 @@ const Index = () => {
           const keys = Object.keys(platforms);
           if (keys.length > 0) setSelectedPlatform(keys[0]);
       } catch (e) {
-          toast.error("Failed to load platforms");
+          toast.error(t("Failed to load platforms"));
       }
   };
 
   const handleAnalyze = async () => {
     if (!projectName.trim()) {
-      toast.error("Please enter a project name");
+      toast.error(t("Enter a project name."));
       return;
     }
 
@@ -73,7 +77,7 @@ const Index = () => {
     
     if (activeTab === "search") {
         if (!selectedToken || !selectedPlatform) {
-            toast.error("Please select a token and chain");
+            toast.error(t("Pick a token and its chain."));
             return;
         }
         
@@ -90,13 +94,13 @@ const Index = () => {
                 content: tokenData.source_code 
             };
         } catch (e) {
-             toast.error("Failed to fetch source code");
+             toast.error(t("Failed to fetch source code"));
              setIsCreatingProject(false);
              return;
         }
     } else {
         if (!fileToUse) {
-            toast.error("Please select a Solidity file");
+            toast.error(t("Choose a .sol file."));
             return;
         }
         setIsCreatingProject(true);
@@ -124,19 +128,29 @@ const Index = () => {
       // Store the actual file content
       sessionStorage.setItem("contractFile", fileToUse!.content);
 
-      toast.success("Project created successfully!");
+      toast.success(t("Project created"));
       navigate("/analysis/live");
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error(
         error instanceof Error 
           ? error.message 
-          : "Failed to create project. Please try again."
+          : t("Failed to create project. Please try again.")
       );
     } finally {
       setIsCreatingProject(false);
     }
   };
+
+  const preview = useMemo(
+    () => (activeTab === "upload" && selectedFile ? previewFromSource(selectedFile.content) : { functions: [], edges: [] }),
+    [activeTab, selectedFile],
+  );
+  const previewCaption = activeTab === "upload" && selectedFile
+    ? t("{f}: {n} functions declared, calls estimated from the source", { f: selectedFile.file.name, n: preview.functions.length })
+    : activeTab === "search" && selectedToken
+    ? t("{name}: the source is fetched when the analysis starts", { name: selectedToken.name })
+    : t("Waiting for a contract");
 
   const startDisabled = !projectName.trim() || isCreatingProject || (activeTab === "upload" ? !selectedFile : (!selectedToken || !selectedPlatform));
 
@@ -144,25 +158,37 @@ const Index = () => {
     <div className="min-h-dvh bg-background">
       <Header />
 
-      <main id="main" className="shell grid gap-12 py-12 lg:grid-cols-12 lg:gap-8 lg:py-16">
-        <div className="lg:col-span-5">
-          <h1 className="text-4xl leading-none sm:text-5xl">Smart Contract Analyzer</h1>
-          <p className="mt-4 max-w-[44ch] text-lg text-ink-2">
-            Upload your Solidity contracts for comprehensive security analysis with real-time streaming results
-          </p>
-          <div className="mt-10 border-t border-rule pt-8">
-            <h2 className="mb-6 text-sm text-muted-foreground">What runs on your contract</h2>
+      <main id="main" className="shell py-12 lg:py-16">
+        <h1 className="text-4xl leading-none sm:text-5xl">{t("Smart Contract Analyzer")}</h1>
+        <p className="mt-4 max-w-[52ch] text-lg text-ink-2">
+          {t("Upload your Solidity contracts for comprehensive security analysis with real-time streaming results")}
+        </p>
+
+        <div className="mt-10 grid gap-10 lg:grid-cols-12 lg:gap-8">
+        <div className="lg:col-span-7">
+          <div className="ticks p-3">
+            <PointScan
+              functions={preview.functions}
+              edges={preview.edges}
+              phase={isCreatingProject ? "scanning" : "idle"}
+              callouts={0}
+              caption={previewCaption}
+              label={t("Preview of the contract as points: {c}", { c: previewCaption })}
+            />
+          </div>
+          <div className="mt-12">
+            <h2 className="mb-6 text-sm text-muted-foreground">{t("What runs on your contract")}</h2>
             <PipelineTrail preview />
           </div>
         </div>
 
-        <section className="panel p-6 sm:p-8 lg:col-span-7" aria-labelledby="new-analysis-head">
-          <h2 id="new-analysis-head" className="sr-only">New Analysis</h2>
+        <section className="panel self-start p-6 sm:p-8 lg:col-span-5" aria-labelledby="new-analysis-head">
+          <h2 id="new-analysis-head" className="sr-only">{t("New Analysis")}</h2>
           <div className="space-y-2">
-            <Label htmlFor="project-name">Project Name</Label>
+            <Label htmlFor="project-name">{t("Project Name")}</Label>
             <Input
               id="project-name"
-              placeholder="e.g., DeFi Protocol Audit"
+              placeholder={t("e.g., DeFi Protocol Audit")}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
             />
@@ -170,34 +196,34 @@ const Index = () => {
 
           <Tabs defaultValue="upload" onValueChange={setActiveTab} className="mt-8 w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upload">Upload File</TabsTrigger>
-              <TabsTrigger value="search">Search Token</TabsTrigger>
+              <TabsTrigger value="upload">{t("Upload File")}</TabsTrigger>
+              <TabsTrigger value="search">{t("Search Token")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="upload" className="mt-6 space-y-2">
-              <Label>Upload Contract</Label>
+              <Label>{t("Upload Contract")}</Label>
               <FileUpload onFileSelect={handleFileSelect} />
             </TabsContent>
 
             <TabsContent value="search" className="mt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="token-search">Token</Label>
+                <Label htmlFor="token-search">{t("Token")}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="token-search"
-                    placeholder="Search token by name or symbol (e.g. USDC, Uniswap)"
+                    placeholder={t("Search token by name or symbol (e.g. USDC, Uniswap)")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleTokenSearch()}
                   />
-                  <Button onClick={handleTokenSearch} disabled={isSearching} variant="outline" size="icon" aria-label="Search token" aria-busy={isSearching}>
+                  <Button onClick={handleTokenSearch} disabled={isSearching} variant="outline" size="icon" aria-label={t("Search token")} aria-busy={isSearching}>
                     {isSearching ? <Loader2 className="keep-motion h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
 
               {searchResults.length > 0 && (
-                <ul className="max-h-60 divide-y divide-rule overflow-y-auto rounded-md border border-rule" aria-label="Search results">
+                <ul className="max-h-60 divide-y divide-rule overflow-y-auto rounded-md border border-rule" aria-label={t("Search results")}>
                   {searchResults.map(token => (
                     <li key={token.id}>
                       <button
@@ -219,10 +245,10 @@ const Index = () => {
 
               {selectedToken && (
                 <div className="land space-y-2">
-                  <Label>Select Chain</Label>
+                  <Label>{t("Select Chain")}</Label>
                   <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                    <SelectTrigger aria-label="Chain">
-                      <SelectValue placeholder="Select chain" />
+                    <SelectTrigger aria-label={t("Chain")}>
+                      <SelectValue placeholder={t("Select chain")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(tokenPlatforms).map(([chain, address]) => (
@@ -248,19 +274,20 @@ const Index = () => {
               {isCreatingProject ? (
                 <>
                   <Loader2 className="keep-motion h-4 w-4 animate-spin" />
-                  Creating Project…
+                  {t("Creating Project…")}
                 </>
               ) : (
-                "Start Analysis"
+                t("Start Analysis")
               )}
             </Button>
             {startDisabled && !isCreatingProject && (
               <p className="text-sm text-muted-foreground">
-                {!projectName.trim() ? "Name the project first." : activeTab === "upload" ? "Choose a .sol file." : "Pick a token and its chain."}
+                {!projectName.trim() ? t("Name the project first.") : activeTab === "upload" ? t("Choose a .sol file.") : t("Pick a token and its chain.")}
               </p>
             )}
           </div>
         </section>
+        </div>
       </main>
     </div>
   );
