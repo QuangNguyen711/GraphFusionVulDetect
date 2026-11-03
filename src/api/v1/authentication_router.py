@@ -5,7 +5,7 @@ from src.utils.helper import get_password_hash, verify_password
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from bson import ObjectId
-from src.models.entity import UserRegister, UserLogin, Token, UserProfile, UserInDB
+from src.models.entity import UserRegister, UserLogin, Token, UserProfile, UserInDB, PasswordChange
 from src.infrastructure.database import get_users_collection
 from src.utils.timezone import now_utc, now_vietnam, ensure_utc_for_db
 from src.config.settings import settings
@@ -79,7 +79,18 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user = await get_user(username=username)
     if user is None:
         raise credentials_exception
+    if payload.get("ver", 0) != user.token_version:
+        raise credentials_exception
     return user
+
+
+def issue_token(user: UserInDB, token_version: int) -> Token:
+    """Create a bearer token bound to the user's current token version"""
+    access_token = create_access_token(
+        data={"sub": user.username, "user_id": user.id, "ver": token_version},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return Token(access_token=access_token, token_type="bearer", expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
 
 @router.post("/register", response_model=UserProfile)
@@ -152,7 +163,7 @@ async def login_for_access_token(user_data: UserLogin):
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username, "user_id": user.id},
+        data={"sub": user.username, "user_id": user.id, "ver": user.token_version},
         expires_delta=access_token_expires
     )
     
@@ -216,3 +227,38 @@ async def update_profile(
         created_at=updated_user.created_at,
         last_login=updated_user.last_login
     )
+
+
+@router.post("/change-password", response_model=Token)
+async def change_password(
+    password_data: PasswordChange,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """Change the password, sign out every other session and return a fresh token"""
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    if verify_password(password_data.new_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must differ from the current one")
+
+    users_collection = await get_users_collection()
+    new_version = current_user.token_version + 1
+    await users_collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$set": {
+            "hashed_password": get_password_hash(password_data.new_password),
+            "token_version": new_version,
+            "password_changed_at": ensure_utc_for_db(now_vietnam()),
+        }}
+    )
+    return issue_token(current_user, new_version)
+
+
+@router.post("/logout-all")
+async def logout_all(current_user: UserInDB = Depends(get_current_user)):
+    """Invalidate every token issued for this user, this one included"""
+    users_collection = await get_users_collection()
+    await users_collection.update_one(
+        {"_id": ObjectId(current_user.id)},
+        {"$inc": {"token_version": 1}}
+    )
+    return {"message": "Signed out on every device"}

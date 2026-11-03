@@ -1,3 +1,4 @@
+from src.utils.language import normalize_language
 import json
 import tempfile
 import os
@@ -90,7 +91,7 @@ class VulnerabilityAnalysisService:
         
         return output_data
     
-    async def analyze_solidity_file(self, file_path: str, temp_dir: str) -> AsyncGenerator[str, None]:
+    async def analyze_solidity_file(self, file_path: str, temp_dir: str, language: str = "en") -> AsyncGenerator[str, None]:
         """
         Analyze a Solidity file and stream results as NDJSON
         
@@ -106,7 +107,8 @@ class VulnerabilityAnalysisService:
         # Create initial state for the graph
         initial_state = {
             "sol_file_path": file_path, 
-            "fcg_save_dir": temp_dir
+            "fcg_save_dir": temp_dir,
+            "language": normalize_language(language),
         }
         
         # Stream analysis results

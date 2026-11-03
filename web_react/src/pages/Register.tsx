@@ -4,14 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/AuthLayout';
+import { readPreferences } from '@/lib/preferences';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from "@/i18n";
 
 const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
+  const t = useT();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,28 +34,28 @@ const Register = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError('Vui lòng nhập họ tên');
+      setError(t('Enter your name.'));
       return false;
     }
 
     if (!formData.email) {
-      setError('Vui lòng nhập email');
+      setError(t('Enter your email.'));
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Email không hợp lệ');
+      setError(t('That email looks incomplete. Write it as name@example.com.'));
       return false;
     }
 
     if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError(t('The password needs at least 6 characters.'));
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError(t('The two passwords do not match.'));
       return false;
     }
 
@@ -70,30 +73,16 @@ const Register = () => {
     const success = await register(formData.name, formData.email, formData.password);
     
     if (success) {
-      toast.success('Đăng ký thành công!');
-      navigate('/');
+      toast.success(t('Account created'));
+      navigate(readPreferences().startPage);
     } else {
-      setError('Đăng ký thất bại. Email có thể đã được sử dụng.');
-      toast.error('Đăng ký thất bại');
+      setError(t('The account could not be created. The email may already be in use.'));
+      toast.error(t('Sign-up failed'));
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-      
-      <Card className="w-full max-w-md glass relative z-10">
-        <CardHeader className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl shadow-glow mx-auto w-fit">
-            <UserPlus className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Đăng ký</CardTitle>
-          <CardDescription>
-            Tạo tài khoản mới để sử dụng hệ thống
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
+    <AuthLayout title={t("Create an account")} description={t("Scan Solidity contracts and keep every result in a project.")}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -102,12 +91,12 @@ const Register = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Họ tên</Label>
+              <Label htmlFor="name">{t("Name")}</Label>
               <Input
                 id="name"
                 name="name"
                 type="text"
-                placeholder="Nhập họ tên"
+                placeholder={t("Your name")}
                 value={formData.name}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -116,7 +105,7 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("Email")}</Label>
               <Input
                 id="email"
                 name="email"
@@ -130,13 +119,13 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password">{t("Password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                  placeholder={t("At least 6 characters")}
                   value={formData.password}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -146,8 +135,9 @@ const Register = () => {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-2"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t("Hide password") : t("Show password")}
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -160,13 +150,13 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+              <Label htmlFor="confirmPassword">{t("Confirm password")}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Nhập lại mật khẩu"
+                  placeholder={t("Same as above")}
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -176,8 +166,9 @@ const Register = () => {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-2"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? t("Hide password") : t("Show password")}
                   disabled={isLoading}
                 >
                   {showConfirmPassword ? (
@@ -191,34 +182,32 @@ const Register = () => {
 
             <Button
               type="submit"
-              className="w-full gradient-primary shadow-glow"
+              className="w-full" aria-busy={isLoading}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang đăng ký...
+                  <Loader2 className="keep-motion h-4 w-4 animate-spin" />
+                  {t("Creating account…")}
                 </>
               ) : (
-                'Đăng ký'
+                t('Create account')
               )}
             </Button>
 
-            <div className="text-center space-y-2">
+            <div className="border-t border-rule pt-5">
               <p className="text-sm text-muted-foreground">
-                Đã có tài khoản?{' '}
+                {t('Already have an account?')}{' '}
                 <Link
                   to="/login"
-                  className="font-medium text-primary hover:underline"
+                  className="text-ink underline decoration-rule-2 underline-offset-4 transition-colors duration-200 hover:text-signal hover:decoration-signal"
                 >
-                  Đăng nhập
+                  {t("Sign in")}
                 </Link>
               </p>
             </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthLayout>
   );
 };
 

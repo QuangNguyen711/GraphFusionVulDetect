@@ -118,7 +118,7 @@ class ChatbotWorkflow:
         
         return self.graph
     
-    def run(self, code: str, issue_description: str = None, conversation_history: list = None):
+    def run(self, code: str, issue_description: str = None, conversation_history: list = None, language: str = "en"):
         """
         Run the chatbot workflow with the given inputs.
         
@@ -138,6 +138,7 @@ class ChatbotWorkflow:
             "code": code,
             "issue_description": issue_description,
             "conversation_history": conversation_history or [],
+            "language": language,
             "analysis_result": None,
             "refactoring_suggestions": None,
             "bot_message": None,
@@ -171,7 +172,7 @@ class ChatbotWorkflow:
             logger.error(f"Failed state: code_len={len(code)}, issue={issue_description}")
             raise
     
-    async def arun(self, code: str, issue_description: str = None, conversation_history: list = None):
+    async def arun(self, code: str, issue_description: str = None, conversation_history: list = None, language: str = "en"):
         """
         Async version of run() for use in async contexts.
         
@@ -191,6 +192,7 @@ class ChatbotWorkflow:
             "code": code,
             "issue_description": issue_description,
             "conversation_history": conversation_history or [],
+            "language": language,
             "analysis_result": None,
             "refactoring_suggestions": None,
             "bot_message": None,

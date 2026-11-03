@@ -7,6 +7,7 @@ class State(TypedDict):
     code: str
     issue_description: str
     conversation_history: Optional[List[Dict[str, str]]]
+    language: Optional[str]
     
     # Processing
     analysis_result: Optional[Dict[str, Any]]

@@ -1,20 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/FileUpload";
 import Header from "@/components/Header";
-import { Shield, Sparkles, Zap, Loader2, Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { PipelineTrail } from "@/components/Pipeline";
+import { PointScan } from "@/components/scan/PointScan";
+import { previewFromSource } from "@/components/scan/parseSolidity";
 import { toast } from "sonner";
 import { projectService } from "@/services/project";
 import { tokenService, TokenSearchResult } from "@/services/token";
+import { useT } from "@/i18n";
 
 const Index = () => {
   const navigate = useNavigate();
+  const t = useT();
   const [projectName, setProjectName] = useState("");
   const [selectedFile, setSelectedFile] = useState<{ file: File; content: string } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
@@ -44,7 +48,7 @@ const Index = () => {
         const results = await tokenService.searchTokens(searchQuery);
         setSearchResults(results);
     } catch (e) {
-        toast.error("Failed to search token");
+        toast.error(t("Failed to search token"));
     } finally {
         setIsSearching(false);
     }
@@ -59,13 +63,13 @@ const Index = () => {
           const keys = Object.keys(platforms);
           if (keys.length > 0) setSelectedPlatform(keys[0]);
       } catch (e) {
-          toast.error("Failed to load platforms");
+          toast.error(t("Failed to load platforms"));
       }
   };
 
   const handleAnalyze = async () => {
     if (!projectName.trim()) {
-      toast.error("Please enter a project name");
+      toast.error(t("Enter a project name."));
       return;
     }
 
@@ -73,7 +77,7 @@ const Index = () => {
     
     if (activeTab === "search") {
         if (!selectedToken || !selectedPlatform) {
-            toast.error("Please select a token and chain");
+            toast.error(t("Pick a token and its chain."));
             return;
         }
         
@@ -90,13 +94,13 @@ const Index = () => {
                 content: tokenData.source_code 
             };
         } catch (e) {
-             toast.error("Failed to fetch source code");
+             toast.error(t("Failed to fetch source code"));
              setIsCreatingProject(false);
              return;
         }
     } else {
         if (!fileToUse) {
-            toast.error("Please select a Solidity file");
+            toast.error(t("Choose a .sol file."));
             return;
         }
         setIsCreatingProject(true);
@@ -124,183 +128,167 @@ const Index = () => {
       // Store the actual file content
       sessionStorage.setItem("contractFile", fileToUse!.content);
 
-      toast.success("Project created successfully!");
-      navigate("/analysis");
+      toast.success(t("Project created"));
+      navigate("/analysis/live");
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error(
         error instanceof Error 
           ? error.message 
-          : "Failed to create project. Please try again."
+          : t("Failed to create project. Please try again.")
       );
     } finally {
       setIsCreatingProject(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      {/* Hero Section */}
-      <div className="gradient-hero border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-16">
-          <div className="text-center space-y-6">
-            <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl shadow-glow mb-4">
-              <Shield className="h-12 w-12 text-primary" />
-            </div>
-            
-            <h1 className="text-5xl font-bold text-foreground">
-              Smart Contract Analyzer
-            </h1>
-            
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Upload your Solidity contracts for comprehensive security analysis
-              with real-time streaming results
-            </p>
+  const preview = useMemo(
+    () => (activeTab === "upload" && selectedFile ? previewFromSource(selectedFile.content) : { functions: [], edges: [] }),
+    [activeTab, selectedFile],
+  );
+  const previewCaption = activeTab === "upload" && selectedFile
+    ? t("{f}: {n} functions declared, calls estimated from the source", { f: selectedFile.file.name, n: preview.functions.length })
+    : activeTab === "search" && selectedToken
+    ? t("{name}: the source is fetched when the analysis starts", { name: selectedToken.name })
+    : t("Waiting for a contract");
 
-            <div className="flex items-center justify-center gap-8 pt-4">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Real-time Analysis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <span className="text-sm text-muted-foreground">AI-Powered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-success" />
-                <span className="text-sm text-muted-foreground">Security First</span>
-              </div>
-            </div>
+  const startDisabled = !projectName.trim() || isCreatingProject || (activeTab === "upload" ? !selectedFile : (!selectedToken || !selectedPlatform));
+
+  return (
+    <div className="min-h-dvh bg-background">
+      <Header />
+
+      <main id="main" className="shell py-12 lg:py-16">
+        <h1 className="text-4xl leading-none sm:text-5xl">{t("Smart Contract Analyzer")}</h1>
+        <p className="mt-4 max-w-[52ch] text-lg text-ink-2">
+          {t("Upload your Solidity contracts for comprehensive security analysis with real-time streaming results")}
+        </p>
+
+        <div className="mt-10 grid gap-10 lg:grid-cols-12 lg:gap-8">
+        <div className="lg:col-span-7">
+          <div className="ticks p-3">
+            <PointScan
+              functions={preview.functions}
+              edges={preview.edges}
+              phase={isCreatingProject ? "scanning" : "idle"}
+              callouts={0}
+              caption={previewCaption}
+              label={t("Preview of the contract as points: {c}", { c: previewCaption })}
+            />
+          </div>
+          <div className="mt-12">
+            <h2 className="mb-6 text-sm text-muted-foreground">{t("What runs on your contract")}</h2>
+            <PipelineTrail preview />
           </div>
         </div>
-      </div>
 
-      {/* Upload Section */}
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <Card className="glass p-8 space-y-8">
+        <section className="panel self-start p-6 sm:p-8 lg:col-span-5" aria-labelledby="new-analysis-head">
+          <h2 id="new-analysis-head" className="sr-only">{t("New Analysis")}</h2>
           <div className="space-y-2">
-            <Label htmlFor="project-name" className="text-lg font-semibold">
-              Project Name
-            </Label>
+            <Label htmlFor="project-name">{t("Project Name")}</Label>
             <Input
               id="project-name"
-              placeholder="e.g., DeFi Protocol Audit"
+              placeholder={t("e.g., DeFi Protocol Audit")}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="h-12 text-lg"
             />
           </div>
 
-          <Tabs defaultValue="upload" onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="upload">Upload File</TabsTrigger>
-                <TabsTrigger value="search">Search Token</TabsTrigger>
+          <Tabs defaultValue="upload" onValueChange={setActiveTab} className="mt-8 w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload">{t("Upload File")}</TabsTrigger>
+              <TabsTrigger value="search">{t("Search Token")}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="upload" className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-lg font-semibold">Upload Contract</Label>
-                <FileUpload onFileSelect={handleFileSelect} />
-              </div>
+            <TabsContent value="upload" className="mt-6 space-y-2">
+              <Label>{t("Upload Contract")}</Label>
+              <FileUpload onFileSelect={handleFileSelect} />
             </TabsContent>
 
-            <TabsContent value="search" className="space-y-4">
-                 <div className="flex gap-2">
-                    <Input 
-                        placeholder="Search token due name or symbol (e.g. USDC, Uniswap)" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleTokenSearch()}
-                    />
-                    <Button onClick={handleTokenSearch} disabled={isSearching} variant="outline" size="icon">
-                        {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    </Button>
-                 </div>
-                 
-                 {searchResults.length > 0 && (
-                     <div className="grid gap-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-background/50">
-                        {searchResults.map(token => (
-                            <div 
-                                key={token.id} 
-                                className={`p-2 cursor-pointer hover:bg-accent rounded flex items-center gap-3 transition-colors ${selectedToken?.id === token.id ? 'bg-primary/20 border-primary border' : ''}`}
-                                onClick={() => handleSelectToken(token)}
-                            >
-                                {token.thumb && <img src={token.thumb} className="w-8 h-8 rounded-full" alt={token.symbol} />}
-                                <div>
-                                    <div className="font-bold">{token.symbol.toUpperCase()}</div>
-                                    <div className="text-xs text-muted-foreground">{token.name}</div>
-                                </div>
-                            </div>
-                        ))}
-                     </div>
-                 )}
-                 
-                 {selectedToken && (
-                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                        <Label>Select Chain</Label>
-                        <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select chain" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Object.entries(tokenPlatforms).map(([chain, address]) => (
-                                    <SelectItem key={chain} value={chain}>
-                                        <span className="capitalize">{chain}</span> <span className="text-muted-foreground text-xs ml-2">({address.substring(0, 8)}...{address.substring(address.length-6)})</span>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                     </div>
-                 )}
+            <TabsContent value="search" className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="token-search">{t("Token")}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="token-search"
+                    placeholder={t("Search token by name or symbol (e.g. USDC, Uniswap)")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleTokenSearch()}
+                  />
+                  <Button onClick={handleTokenSearch} disabled={isSearching} variant="outline" size="icon" aria-label={t("Search token")} aria-busy={isSearching}>
+                    {isSearching ? <Loader2 className="keep-motion h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              {searchResults.length > 0 && (
+                <ul className="max-h-60 divide-y divide-rule overflow-y-auto rounded-md border border-rule" aria-label={t("Search results")}>
+                  {searchResults.map(token => (
+                    <li key={token.id}>
+                      <button
+                        type="button"
+                        aria-pressed={selectedToken?.id === token.id}
+                        className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-200 hover:bg-paper-3 ${selectedToken?.id === token.id ? 'bg-signal-soft' : ''}`}
+                        onClick={() => handleSelectToken(token)}
+                      >
+                        {token.thumb && <img src={token.thumb} width={28} height={28} className="h-7 w-7 rounded-full" alt="" />}
+                        <span>
+                          <span className="block text-sm text-ink">{token.symbol.toUpperCase()}</span>
+                          <span className="block text-xs text-muted-foreground">{token.name}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {selectedToken && (
+                <div className="land space-y-2">
+                  <Label>{t("Select Chain")}</Label>
+                  <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                    <SelectTrigger aria-label={t("Chain")}>
+                      <SelectValue placeholder={t("Select chain")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(tokenPlatforms).map(([chain, address]) => (
+                        <SelectItem key={chain} value={chain}>
+                          <span className="capitalize">{chain}</span>{' '}
+                          <span className="code-text ml-2 text-xs text-muted-foreground">{address.substring(0, 8)}…{address.substring(address.length-6)}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
-          <Button
-            onClick={handleAnalyze}
-            size="lg"
-            className="w-full h-14 text-lg font-semibold gradient-primary shadow-glow hover:shadow-glow transition-smooth"
-            disabled={!projectName.trim() || isCreatingProject || (activeTab === "upload" ? !selectedFile : (!selectedToken || !selectedPlatform))}
-          >
-            {isCreatingProject ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Creating Project...
-              </>
-            ) : (
-              "Start Analysis"
+          <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-rule pt-6">
+            <Button
+              onClick={handleAnalyze}
+              size="lg"
+              disabled={startDisabled}
+              aria-busy={isCreatingProject}
+            >
+              {isCreatingProject ? (
+                <>
+                  <Loader2 className="keep-motion h-4 w-4 animate-spin" />
+                  {t("Creating Project…")}
+                </>
+              ) : (
+                t("Start Analysis")
+              )}
+            </Button>
+            {startDisabled && !isCreatingProject && (
+              <p className="text-sm text-muted-foreground">
+                {!projectName.trim() ? t("Name the project first.") : activeTab === "upload" ? t("Choose a .sol file.") : t("Pick a token and its chain.")}
+              </p>
             )}
-          </Button>
-        </Card>
-
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-12">
-          <Card className="glass p-6 text-center">
-            <Shield className="h-10 w-10 text-primary mx-auto mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">Security Checks</h3>
-            <p className="text-sm text-muted-foreground">
-              Comprehensive vulnerability scanning and best practice validation
-            </p>
-          </Card>
-
-          <Card className="glass p-6 text-center">
-            <Sparkles className="h-10 w-10 text-accent mx-auto mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">Smart Analysis</h3>
-            <p className="text-sm text-muted-foreground">
-              AI-powered detection of complex patterns and potential issues
-            </p>
-          </Card>
-
-          <Card className="glass p-6 text-center">
-            <Zap className="h-10 w-10 text-warning mx-auto mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">Real-time Results</h3>
-            <p className="text-sm text-muted-foreground">
-              Live streaming analysis with instant feedback and visualization
-            </p>
-          </Card>
+          </div>
+        </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

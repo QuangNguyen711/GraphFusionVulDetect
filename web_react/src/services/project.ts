@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { readPreferences } from "@/lib/preferences";
 
 export interface ProjectCreate {
   name: string;
@@ -177,6 +178,7 @@ class ProjectService {
     if (projectId) {
       formData.append('project_id', projectId);
     }
+    formData.append('language', readPreferences().language);
 
     const token = localStorage.getItem('auth_token');
     console.log('Token for analysis:', token ? 'Token exists' : 'No token found');

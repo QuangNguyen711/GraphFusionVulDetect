@@ -28,6 +28,7 @@ logger = logging.getLogger("GraphFusionVulDetect-API")
 async def analyze_contract(
     file: UploadFile = File(..., description="Solidity file to analyze"),
     project_id: str = Form(None, description="Optional project ID to associate the analysis with"),
+    language: str = Form("en", description="Language for generated explanations: en or vi"),
     current_user: UserInDB = Depends(get_current_user)
 ):
     """
@@ -155,7 +156,7 @@ async def analyze_contract(
         try:
             # Stream analysis results and save each step
             async for result_line in vulnerability_analysis_service.analyze_solidity_file(
-                file_path, temp_dir
+                file_path, temp_dir, language
             ):
                 # Parse the result
                 try:

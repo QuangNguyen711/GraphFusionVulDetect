@@ -1,103 +1,122 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Vantage (by request) · redesign: full
+ * nav: top bar, wordmark left, two links, account right · signature: the pipeline trail, four graph stages on one spine filling as the stream lands · states: loading, empty, error, full, streaming, skipped · vantage: terrain/steel
+ * axes: dark/grotesk-sans/chromatic-lime · posture: restrained · contrast: pass · data: sample (mock API for screenshots only) · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 · weakest: P, a dark tool look is expected for security; argued it with the contract verdict set as one measured figure in corner ticks instead of a stat wall */
+/* Hallmark · waive 39b · the history rows and project-name buttons are list rows, two lines tall or inline in a clickable table row · each whole row is the hit target, not a standalone control */
+/* Hallmark · dismissed 40 · .stage__marker paints paper-3 only on its icon over the cool or bad fill, never text on paper */
+/* Hallmark · dismissed 23 · .stage__progress is a 2px by 24rem loader bar, its lime part a third of that, far under 5% of any viewport */
+/* Hallmark · reworded "GraphFusion" header h1 to the wordmark span · each screen now owns its one h1 */
+/* Hallmark · reworded "Upload Smart Contract" h3 to the drop zone label text · a heading inside a form label broke the outline */
+/* Hallmark · reworded "Analysis Status" h2 to the status line beside the chip · 54 names a heading that only announces a chip */
+/* Hallmark · dropped "Security Checks", "Smart Analysis" cards · 3 names icon-over-heading tiles; the real stages now show as the pipeline trail */
+/* Hallmark · dropped "Real-time Results" card · 3 names icon-over-heading tiles; streaming now shows as stages landing on the trail */
+@import "./tokens.css";
+@import "./base.css" layer(base);
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
-  :root {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 199 89% 48%;
-    --primary-foreground: 222 47% 11%;
-
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 142 71% 45%;
-    --accent-foreground: 222 47% 11%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 11%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 222 47% 11%;
-
-    --border: 217 33% 25%;
-    --input: 217 33% 25%;
-    --ring: 199 89% 48%;
-
-    --radius: 0.75rem;
-
-    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(199 89% 38%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 35%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 33% 17%) 100%);
-    
-    --shadow-glow: 0 0 40px hsl(199 89% 48% / 0.3);
-    --shadow-card: 0 10px 30px hsl(222 47% 11% / 0.5);
-    
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
+  * { @apply border-border; }
+  body { font-family: var(--font-body); font-weight: 300; font-variation-settings: "SHRP" 0; }
+  h1, h2, h3, h4 { font-variation-settings: "SHRP" 100; }
+  code, pre, kbd { font-family: var(--font-outlier); }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+@layer components {
+  .shell { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--gutter); }
+  .panel { background: var(--color-paper-2); color: var(--color-ink); border-radius: var(--radius-card); }
+  .ticks { position: relative; }
+  .ticks::before { content: ""; position: absolute; inset: 0; pointer-events: none; border: var(--rule-hair) solid var(--color-rule-2); -webkit-mask: conic-gradient(at var(--tick) var(--tick), transparent 75%, var(--color-ink) 0) 0 0 / calc(100% - var(--tick)) calc(100% - var(--tick)); mask: conic-gradient(at var(--tick) var(--tick), transparent 75%, var(--color-ink) 0) 0 0 / calc(100% - var(--tick)) calc(100% - var(--tick)); }
+  .well { background: var(--color-paper-3); border-radius: var(--radius-card); }
+  .measured { font-weight: 400; font-variant-numeric: tabular-nums; }
+  .unit { font-size: 0.75em; color: var(--color-muted); }
+  .code-text { font-family: var(--font-outlier); font-weight: 400; }
+  .reading { font-size: var(--text-reading); font-weight: 200; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--color-ink); }
 
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
+  .trail { position: relative; padding-left: var(--space-xl); }
+  .trail__spine { position: absolute; left: 11px; top: var(--space-sm); bottom: var(--space-sm); width: 2px; background: var(--color-rule); }
+  .trail__fill { position: absolute; inset: 0; background: var(--color-cool); transform-origin: top; transform: scaleY(var(--progress, 0)); transition: transform var(--dur-long) var(--ease-out); }
+  .stage { position: relative; min-width: 0; }
+  .stage__marker { position: absolute; left: calc(-1 * var(--space-xl)); top: 0; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--color-rule-2); background: var(--color-paper); color: var(--color-paper-3); transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out); }
+  .stage[data-state="running"] .stage__marker { border-color: var(--color-accent); }
+  .stage[data-state="done"] .stage__marker { border-color: var(--color-cool); background: var(--color-cool); }
+  .stage[data-state="error"] .stage__marker { border-color: var(--color-bad); background: var(--color-bad); }
+  .stage[data-state="skipped"] .stage__marker { border-style: dashed; }
+  .stage__title { color: var(--color-muted); transition: color var(--dur-short) var(--ease-out); }
+  .stage[data-state="running"] .stage__title, .stage[data-state="done"] .stage__title, .stage[data-state="error"] .stage__title { color: var(--color-ink); }
+  .stage__spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--color-accent-soft); border-top-color: var(--color-accent); animation: spin 0.9s linear infinite; }
+  .stage__toggle { display: inline-flex; align-items: center; gap: var(--space-xs); padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 2px; }
+  .stage__toggle:hover .stage__title { color: var(--color-accent); }
+  .stage__chevron { color: var(--color-muted); transition: transform var(--dur-short) var(--ease-out); }
+  .stage__toggle[aria-expanded="false"] .stage__chevron { transform: rotate(-90deg); }
+  .trail__all { min-height: 32px; padding: 0 var(--space-md); border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); background: transparent; color: var(--color-ink-2); font-size: var(--text-sm); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
+  .trail__all:hover { background: var(--color-paper-3); color: var(--color-ink); }
+  .trail__all:active { transform: translateY(1px); }
+  .stage__progress { position: relative; display: block; height: 2px; margin-top: var(--space-sm); max-width: 24rem; overflow: hidden; background: var(--color-rule); border-radius: 1px; }
+  .stage__progress::after { content: ""; position: absolute; inset: 0; width: 35%; background: var(--color-accent); animation: progress-run 1.4s var(--ease-in-out) infinite; }
+  .land { animation: land var(--dur-long) var(--ease-out) both; }
 
-  code, pre {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  }
+  .grow-x { transform-origin: left; animation: grow-x 900ms var(--ease-out) both; }
+
+  .fcg { display: block; width: 100%; height: var(--graph-height); background: var(--color-paper-3); cursor: grab; touch-action: none; }
+  .fcg-edge { stroke: var(--color-rule-2); stroke-width: 1.5; animation: fade-in var(--dur-long) var(--ease-out) 300ms both; }
+  .fcg-arrow { fill: var(--color-rule-2); }
+  .fcg-node { cursor: pointer; animation: fade-in var(--dur-long) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+  .fcg-node circle { fill: var(--color-ok-soft); stroke: var(--color-ok); stroke-width: 1.5; transition: stroke var(--dur-micro) var(--ease-out), fill var(--dur-micro) var(--ease-out); }
+  .fcg-node.is-vulnerable circle { fill: var(--color-bad-soft); stroke: var(--color-bad); }
+  .fcg-node:hover circle, .fcg-node:focus-visible circle { stroke: var(--color-ink); }
+  .fcg-node:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  .fcg-node:focus-visible circle { stroke: var(--color-focus); stroke-width: 3; }
+  .fcg-node text { fill: var(--color-ink-2); font-family: var(--font-outlier); font-size: 10px; font-weight: 400; pointer-events: none; }
+  .fcg-node.is-vulnerable text { fill: var(--color-ink); }
+  .fcg-tip { position: absolute; z-index: var(--z-tooltip); pointer-events: none; padding: var(--space-xs) var(--space-sm); background: var(--color-paper-3); border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); color: var(--color-ink-2); font-size: var(--text-xs); line-height: 1.5; }
+  .fcg-tip b { color: var(--color-ink); font-weight: 400; }
+
+  .chat-prose { color: var(--color-ink-2); font-size: var(--text-sm); line-height: 1.6; }
+  .chat-prose > * + * { margin-top: var(--space-sm); }
+  .chat-prose strong { color: var(--color-ink); font-weight: 400; }
+  .chat-prose h1, .chat-prose h2, .chat-prose h3, .chat-prose h4 { font-size: var(--text-md); letter-spacing: 0; color: var(--color-ink); }
+  .chat-prose ul { list-style: disc; padding-left: var(--space-lg); }
+  .chat-prose ol { list-style: decimal; padding-left: var(--space-lg); }
+  .chat-prose a { color: var(--color-cool); text-decoration: underline; }
+  .chat-prose a:hover { color: var(--color-accent); }
+  .chat-prose pre { padding: var(--space-sm); background: var(--color-paper-3); border-radius: var(--radius-card); overflow-x: auto; font-size: var(--text-xs); }
+  .chat-prose :not(pre) > code { padding: 0 var(--space-2xs); background: var(--color-paper-3); border-radius: 4px; font-size: var(--text-xs); }
 }
 
-@layer utilities {
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-  
-  .gradient-accent {
-    background: var(--gradient-accent);
-  }
-  
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
-  
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
-  
-  .transition-smooth {
-    transition: var(--transition-smooth);
-  }
-  
-  .glass {
-    background: hsl(217 33% 17% / 0.8);
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(217 33% 25%);
-  }
+@layer components {
+  .scan { position: relative; margin: 0; }
+  .scan__stage { position: relative; height: clamp(320px, 52dvh, 520px); }
+  .scan--lg .scan__stage { height: clamp(360px, 64dvh, 640px); }
+  .scan--sm .scan__stage { height: clamp(260px, 40dvh, 380px); }
+  .scan__canvas { display: block; width: 100%; height: 100%; -webkit-mask-image: radial-gradient(ellipse 72% 68% at 50% 55%, var(--color-ink) 55%, transparent 100%); mask-image: radial-gradient(ellipse 72% 68% at 50% 55%, var(--color-ink) 55%, transparent 100%); }
+  .scan__callout { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity var(--dur-long) var(--ease-out); }
+  .scan__callout[data-found="true"] { opacity: 1; }
+  .scan__leader { position: absolute; left: 0; bottom: 0; width: 1px; height: calc(var(--lift, 116px) - 52px); background: var(--color-ink-2); }
+  .scan__leader::after { content: ""; position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-bad); }
+  .scan__label { position: absolute; left: var(--space-xs); bottom: calc(var(--lift, 116px) - 56px); padding: var(--space-xs) var(--space-sm); background: var(--color-paper-2); border-radius: var(--radius-card); white-space: nowrap; }
+  .scan__caption { position: absolute; inset: auto 0 0 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); font-size: var(--text-sm); color: var(--color-muted); }
+  .scan__toggle { min-height: 44px; padding: 0 var(--space-md); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-ink-2); box-shadow: inset 0 0 0 var(--rule-hair) var(--color-rule-2); font: 400 var(--text-sm)/1 var(--font-body); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
+  .scan__toggle:hover { background: var(--color-paper-3); }
+  .scan__toggle:active { transform: translateY(1px); }
+  .scan__toggle:disabled { opacity: 0.55; cursor: not-allowed; }
+  .scan__callout[data-side="left"] .scan__label { left: auto; right: var(--space-xs); }
+  .scan a:focus-visible, .scan button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+}
+
+@media (max-width: 40rem) { .scan__label { display: none; } }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes progress-run { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@keyframes land { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .land, .grow-x, .fcg-node, .fcg-edge { animation: none; }
+  .scan__callout, .scan__toggle { transition: none; }
+  .scan__toggle:active { transform: none; }
+  .trail__fill, .stage__marker, .stage__title, .stage__chevron, .trail__all { transition: none; }
 }

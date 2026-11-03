@@ -6,6 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
+from src.utils.language import normalize_language
 
 from src.services.refactorbot_service import RefactorBotService
 from src.models.entity import UserInDB
@@ -20,6 +21,7 @@ class RefactoringAdviceRequest(BaseModel):
     """Request model for getting refactoring advice"""
     code: str = Field(..., description="Solidity code to refactor", min_length=1)
     issue_description: str = Field(..., description="Description of the issue or vulnerability", min_length=1)
+    language: str = Field("en", description="Language for the answer: en or vi")
 
 class RefactoringSuggestion(BaseModel):
     """Model for a single refactoring suggestion"""
@@ -49,6 +51,7 @@ class ConversationRequest(BaseModel):
         description="Previous conversation messages",
         min_items=1
     )
+    language: str = Field("en", description="Language for the answer: en or vi")
 
 class ConversationResponse(BaseModel):
     """Response model for conversation"""
@@ -98,7 +101,8 @@ async def get_refactoring_advice(
         # Get refactoring advice from service
         result = await refactorbot_service.get_refactoring_advice(
             code=request.code,
-            issue_description=request.issue_description
+            issue_description=request.issue_description,
+            language=normalize_language(request.language)
         )
         
         logger.debug(f"Service returned result with keys: {list(result.keys()) if result else 'NONE'}")
@@ -170,7 +174,8 @@ async def continue_refactoring_conversation(
         # Get conversation response from service
         result = await refactorbot_service.get_code_fix_conversation(
             conversation_history=conversation_history,
-            current_code=request.code
+            current_code=request.code,
+            language=normalize_language(request.language)
         )
         
         # Check for errors

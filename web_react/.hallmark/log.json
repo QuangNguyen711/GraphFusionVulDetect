@@ -1,0 +1,31 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "site",
+  "shape": "Split Studio",
+  "theme": "vantage",
+  "axes": "dark/grotesk-sans/chromatic-lime",
+  "hero": "Counter",
+  "nav": "slab",
+  "footer": "colophon block",
+  "imagery": "screenshots 3 (capture.mjs), scan built as points",
+  "photos": [],
+  "entry": "/",
+  "fingerprint": "d27bae",
+  "sections": [
+   "hero",
+   "split report",
+   "split diff band",
+   "split capture",
+   "split rows",
+   "split close"
+  ],
+  "signature": "sample contract scanned as a point cloud, sweep lights vulnerable functions lime",
+  "waived": [
+   "39b"
+  ],
+  "prompt": "GraphFusion landing and app redesign, Vantage, smart contract vulnerability scans",
+  "date": "2026-11-03"
+ }
+]

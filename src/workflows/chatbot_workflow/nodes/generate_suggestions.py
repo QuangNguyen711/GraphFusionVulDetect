@@ -11,6 +11,8 @@ from src.workflows.chatbot_workflow.graph.state import State
 logger = logging.getLogger(__name__)
 
 
+from src.utils.language import language_instruction
+
 def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> State:
     """
     Generate specific refactoring suggestions based on the analysis.
@@ -59,6 +61,7 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
             "4. **Resource Links**: Relevant documentation or examples\n\n"
             "Format your response clearly with these sections."
         )
+        prompt += language_instruction(state.get("language"))
         
         print(f"Sending prompt to LLM for suggestions (length: {len(prompt)} chars)")
         
@@ -112,7 +115,11 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
         state["refactoring_suggestions"] = suggestions
         state["explanation"] = answer
         state["suggested_code"] = suggested_code  # Set suggested code or None
-        state["bot_message"] = f"I've analyzed the code and found the following suggestions for {issue_description}:"
+        state["bot_message"] = (
+            f"Tôi đã phân tích mã và có các gợi ý sau cho {issue_description}:"
+            if state.get("language") == "vi"
+            else f"I've analyzed the code and found the following suggestions for {issue_description}:"
+        )
         
         print(f"Generated {len(suggestions)} refactoring suggestions")
         print(f"Suggested code extracted: {bool(suggested_code)}")

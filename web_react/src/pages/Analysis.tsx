@@ -1,14 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
-import { ArrowLeft, Activity, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, XCircle } from "lucide-react";
 import { StreamingResults } from "@/components/StreamingResults";
 import { ContractVisualization } from "@/components/ContractVisualization";
 import { RefactorChatbot } from "@/components/RefactorChatbot";
 import { projectService } from "@/services/project";
 import { toast } from "sonner";
+import { useT } from "@/i18n";
 
 interface AnalysisData {
   status: "pending" | "analyzing" | "complete" | "error";
@@ -22,6 +23,7 @@ interface AnalysisData {
 
 const Analysis = () => {
   const navigate = useNavigate();
+  const t = useT();
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [streamingResults, setStreamingResults] = useState<any[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -31,11 +33,11 @@ const Analysis = () => {
     if (storedData) {
       const data = JSON.parse(storedData);
       if (data.isExistingProject && data.projectId) {
-        navigate(`/projects/${data.projectId}`);
+        navigate(`/project/${data.projectId}`);
         return;
       }
     }
-    navigate("/");
+    navigate("/analysis");
   };
 
   useEffect(() => {
@@ -43,7 +45,7 @@ const Analysis = () => {
     const fileContent = sessionStorage.getItem("contractFile");
     
     if (!storedData || !fileContent) {
-      navigate("/");
+      navigate("/analysis");
       return;
     }
 
@@ -51,8 +53,8 @@ const Analysis = () => {
     
     // Check if we have project information from the new flow
     if (!data.projectId) {
-      toast.error("Project information missing. Please start from the beginning.");
-      navigate("/");
+      toast.error(t("Project information missing. Please start from the beginning."));
+      navigate("/analysis");
       return;
     }
 
@@ -91,7 +93,7 @@ const Analysis = () => {
         if (done) {
           setIsStreaming(false);
           setAnalysisData(prev => prev ? { ...prev, status: "complete" } : null);
-          toast.success("Analysis completed successfully!");
+          toast.success(t("Analysis complete"));
           break;
         }
 
@@ -129,22 +131,7 @@ const Analysis = () => {
         error: errorMessage
       } : null);
       
-      toast.error(`Analysis failed: ${errorMessage}`);
-    }
-  };
-
-  const getStatusIcon = () => {
-    if (!analysisData) return null;
-    
-    switch (analysisData.status) {
-      case "analyzing":
-        return <Activity className="h-6 w-6 text-primary animate-pulse" />;
-      case "complete":
-        return <CheckCircle className="h-6 w-6 text-success" />;
-      case "error":
-        return <XCircle className="h-6 w-6 text-destructive" />;
-      default:
-        return <AlertTriangle className="h-6 w-6 text-warning" />;
+      toast.error(t("Analysis failed: {e}", { e: errorMessage }));
     }
   };
 
@@ -152,92 +139,71 @@ const Analysis = () => {
     return null;
   }
 
+  const backLabel = (() => {
+    const storedData = sessionStorage.getItem("contractAnalysis");
+    if (storedData) {
+      const data = JSON.parse(storedData);
+      if (data.isExistingProject) return t("Project");
+    }
+    return t("Upload");
+  })();
+
+  const statusChip = {
+    pending: { variant: "outline" as const, label: t("Pending") },
+    analyzing: { variant: "signal" as const, label: t("Analyzing") },
+    complete: { variant: "secondary" as const, label: t("Complete") },
+    error: { variant: "destructive" as const, label: t("Error") },
+  }[analysisData.status];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Header />
-      
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to {(() => {
-              const storedData = sessionStorage.getItem("contractAnalysis");
-              if (storedData) {
-                const data = JSON.parse(storedData);
-                if (data.isExistingProject) return "Project";
-              }
-              return "Upload";
-            })()}
-          </Button>
-          
-          <div className="flex items-center gap-3">
-            {getStatusIcon()}
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {analysisData.projectName}
-              </h1>
-              <p className="text-sm text-muted-foreground">{analysisData.fileName}</p>
-            </div>
+
+      <main id="main" className="shell py-10 lg:py-12">
+        <Button variant="link" onClick={handleBack} className="gap-2 text-sm text-ink-2">
+          <ArrowLeft className="h-4 w-4" />
+          {t("Back to {where}", { where: backLabel })}
+        </Button>
+
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-8">
+          <div className="min-w-0">
+            <h1 className="break-words text-4xl leading-none">{analysisData.projectName}</h1>
+            <p className="code-text mt-3 break-all text-sm text-ink-2">{analysisData.fileName}</p>
           </div>
+          <p className="flex items-center gap-3 text-sm text-muted-foreground" role="status">
+            {t("Analysis Status")}
+            <Badge variant={statusChip.variant}>
+              {isStreaming && <span className="stage__spin keep-motion h-2.5 w-2.5" aria-hidden="true" />}
+              {statusChip.label}
+            </Badge>
+          </p>
         </div>
 
-        {/* Status Card */}
-        <Card className="glass p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-1">
-                Analysis Status
-              </h2>
-              <p className="text-muted-foreground capitalize">
-                {analysisData.status}
-              </p>
-            </div>
-            {isStreaming && (
-              <div className="flex gap-2">
-                <div className="h-3 w-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="h-3 w-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="h-3 w-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Error Display */}
-        {analysisData.status === "error" && analysisData.error && (
-          <Card className="border-destructive bg-destructive/10 p-6">
-            <div className="flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-destructive mt-0.5" />
+        <div className="mt-10 space-y-10">
+          {analysisData.status === "error" && analysisData.error && (
+            <div role="alert" className="flex items-start gap-3 rounded-md bg-bad-soft p-4">
+              <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-bad" aria-hidden="true" />
               <div>
-                <h3 className="font-semibold text-destructive mb-1">Analysis Error</h3>
-                <p className="text-sm text-destructive/90">{analysisData.error}</p>
+                <h2 className="text-base text-bad">{t("Analysis Error")}</h2>
+                <p className="mt-1 text-sm text-ink-2">{analysisData.error}</p>
               </div>
             </div>
-          </Card>
-        )}
+          )}
 
-        {/* Streaming Results */}
-        <StreamingResults results={streamingResults} isStreaming={isStreaming} />
+          <ContractVisualization data={streamingResults} isStreaming={isStreaming} />
 
-        {/* Visualization */}
-        {streamingResults.length > 0 && (
-          <ContractVisualization data={streamingResults} />
-        )}
-      </div>
+          <StreamingResults results={streamingResults} isStreaming={isStreaming} />
+        </div>
+      </main>
 
-      {/* Refactor Chatbot */}
-      <RefactorChatbot 
+      <RefactorChatbot
         vulnerableFunctions={
           streamingResults
             .flatMap(result => result.output?.func_vulnerability_predictions || [])
-            .filter((func, index, self) => 
+            .filter((func, index, self) =>
               index === self.findIndex(f => f.function_name === func.function_name)
             )
-        } 
+        }
       />
     </div>
   );

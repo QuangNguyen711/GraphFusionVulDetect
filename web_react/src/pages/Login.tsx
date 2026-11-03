@@ -4,14 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/AuthLayout';
+import { readPreferences } from '@/lib/preferences';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useT } from "@/i18n";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,42 +25,28 @@ const Login = () => {
     setError('');
 
     if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ email và mật khẩu');
+      setError(t('Enter your email and password.'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError(t('The password needs at least 6 characters.'));
       return;
     }
 
     const success = await login(email, password);
     
     if (success) {
-      toast.success('Đăng nhập thành công!');
-      navigate('/');
+      toast.success(t('Signed in'));
+      navigate(readPreferences().startPage);
     } else {
-      setError('Email hoặc mật khẩu không đúng');
-      toast.error('Đăng nhập thất bại');
+      setError(t('That email and password do not match an account.'));
+      toast.error(t('Sign-in failed'));
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-      
-      <Card className="w-full max-w-md glass relative z-10">
-        <CardHeader className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl shadow-glow mx-auto w-fit">
-            <Shield className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>
-          <CardDescription>
-            Nhập thông tin đăng nhập để truy cập hệ thống
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
+    <AuthLayout title={t("Sign in")} description={t("Use your account to open your projects and analyses.")}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -66,7 +55,7 @@ const Login = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("Email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -79,12 +68,12 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password">{t("Password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
+                  placeholder={t("At least 6 characters")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
@@ -94,8 +83,9 @@ const Login = () => {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-2"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t("Hide password") : t("Show password")}
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -109,34 +99,32 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full gradient-primary shadow-glow"
+              className="w-full" aria-busy={isLoading}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang đăng nhập...
+                  <Loader2 className="keep-motion h-4 w-4 animate-spin" />
+                  {t("Signing in…")}
                 </>
               ) : (
-                'Đăng nhập'
+                t('Sign in')
               )}
             </Button>
 
-            <div className="text-center space-y-2">
+            <div className="border-t border-rule pt-5">
               <p className="text-sm text-muted-foreground">
-                Chưa có tài khoản?{' '}
+                {t('No account yet?')}{' '}
                 <Link
                   to="/register"
-                  className="font-medium text-primary hover:underline"
+                  className="text-ink underline decoration-rule-2 underline-offset-4 transition-colors duration-200 hover:text-signal hover:decoration-signal"
                 >
-                  Đăng ký ngay
+                  {t("Create one")}
                 </Link>
               </p>
             </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthLayout>
   );
 };
 

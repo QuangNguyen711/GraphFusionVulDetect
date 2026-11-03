@@ -42,6 +42,8 @@ export class AuthService {
     LOGOUT: '/api/v1/auth/logout',
     ME: '/api/v1/auth/me',
     PROFILE: '/api/v1/auth/profile',
+    CHANGE_PASSWORD: '/api/v1/auth/change-password',
+    LOGOUT_ALL: '/api/v1/auth/logout-all',
   };
 
   /**
@@ -132,6 +134,30 @@ export class AuthService {
     } catch (error) {
       console.error('Update profile error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Change password; the server signs out every other session and returns a fresh token
+   */
+  static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const tokenData = await apiFetch<Token>(this.AUTH_ENDPOINTS.CHANGE_PASSWORD, {
+      method: 'POST',
+      body: { current_password: currentPassword, new_password: newPassword },
+      requireAuth: true,
+    });
+    localStorage.setItem('auth_token', tokenData.access_token);
+  }
+
+  /**
+   * Sign out on every device, this one included
+   */
+  static async logoutAll(): Promise<void> {
+    try {
+      await apiFetch(this.AUTH_ENDPOINTS.LOGOUT_ALL, { method: 'POST', requireAuth: true });
+    } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
     }
   }
 

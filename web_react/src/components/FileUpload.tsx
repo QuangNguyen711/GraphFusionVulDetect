@@ -1,10 +1,9 @@
 import { useCallback, useState } from "react";
 import { Upload, File, AlertCircle, Loader2, CheckCircle } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AnalysisService, { FileInfo } from "@/services/analysis";
+import { useT } from "@/i18n";
 
 interface FileUploadProps {
   onFileSelect: (file: File, content: string) => void;
@@ -13,6 +12,7 @@ interface FileUploadProps {
 }
 
 export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }: FileUploadProps) => {
+  const t = useT();
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -125,12 +125,12 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
   const supportedTypes = AnalysisService.getSupportedFileTypes();
 
   return (
-    <div className="space-y-4">
-      <Card
-        className={`relative overflow-hidden transition-smooth ${
+    <div className="space-y-3">
+      <div
+        className={`rounded-md border border-dashed transition-colors duration-200 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${
           isDragging
-            ? "border-primary bg-primary/5 shadow-glow"
-            : "border-border hover:border-primary/50"
+            ? "border-signal bg-signal-soft"
+            : "border-rule-2 bg-paper-3 hover:border-muted-foreground"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -141,86 +141,70 @@ export const FileUpload = ({ onFileSelect, onAnalysisStart, onAnalysisComplete }
       >
         <label
           htmlFor="file-upload"
-          className="flex flex-col items-center justify-center p-12 cursor-pointer"
+          className="flex cursor-pointer items-center gap-4 rounded-md p-5 sm:p-6"
         >
-          <div className={`transition-smooth ${isDragging ? "scale-110" : ""}`}>
+          <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full border border-rule-2 text-muted-foreground" aria-hidden="true">
             {uploadedFileInfo ? (
-              <CheckCircle className="h-16 w-16 text-success mb-4" />
+              <CheckCircle className="h-4 w-4 text-ok" />
             ) : selectedFile ? (
-              <File className="h-16 w-16 text-primary mb-4" />
+              <File className="h-4 w-4 text-signal" />
             ) : (
-              <Upload className="h-16 w-16 text-primary mb-4" />
+              <Upload className="h-4 w-4" />
             )}
-          </div>
-          
-          <h3 className="text-xl font-semibold text-foreground mb-2">
-            {uploadedFileInfo 
-              ? `Uploaded: ${uploadedFileInfo.filename}`
-              : selectedFile 
-              ? selectedFile.name 
-              : "Upload Smart Contract"
-            }
-          </h3>
-          
-          <p className="text-muted-foreground text-center mb-4">
-            {uploadedFileInfo
-              ? "File uploaded successfully. Ready for analysis."
-              : selectedFile 
-              ? "File selected. Click upload to continue."
-              : "Drag and drop your smart contract file here, or click to browse"
-            }
-          </p>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="px-3 py-1 bg-muted rounded-md">{supportedTypes.join(', ')}</span>
-            <span className="px-3 py-1 bg-muted rounded-md">Max 10MB</span>
-          </div>
+          </span>
+          <span className="min-w-0">
+            <span className={`block break-all text-base ${selectedFile ? "code-text text-sm text-ink" : "text-ink"}`}>
+              {uploadedFileInfo
+                ? t("Uploaded: {f}", { f: uploadedFileInfo.filename })
+                : selectedFile
+                ? selectedFile.name
+                : t("Upload Smart Contract")}
+            </span>
+            <span className="mt-1 block text-sm text-muted-foreground">
+              {uploadedFileInfo
+                ? t("File uploaded successfully. Ready for analysis.")
+                : selectedFile
+                ? t("{s} KB. Drop another file to replace it.", { s: (selectedFile.size / 1024).toFixed(1) })
+                : t("Drag and drop your smart contract file here, or click to browse")}
+            </span>
+            <span className="mt-2 block text-xs text-muted-foreground">
+              {t("{types}, max 10 MB", { types: supportedTypes.join(', ') })}
+            </span>
+          </span>
         </label>
-        
+
         <input
           id="file-upload"
           type="file"
           accept={supportedTypes.join(',')}
           onChange={handleChange}
-          className="hidden"
+          className="sr-only"
         />
-      </Card>
+      </div>
 
       {isUploading && (
-        <Card className="p-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span>{uploadProgress}%</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2" />
+        <div className="space-y-2" role="status">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>{t("Progress")}</span>
+            <span className="measured">{uploadProgress}%</span>
           </div>
-        </Card>
+          <Progress value={uploadProgress} className="h-1.5" />
+        </div>
       )}
 
       {error && (
-        <Card className="border-destructive bg-destructive/10 p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        </Card>
+        <p role="alert" className="flex items-start gap-2 rounded-md bg-bad-soft p-3 text-sm text-bad">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          {error}
+        </p>
       )}
 
       {uploadedFileInfo && (
-        <Card className="border-success bg-success/10 p-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="font-medium text-success">File uploaded successfully</span>
-            </div>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p>File: {uploadedFileInfo.filename}</p>
-              <p>Size: {(uploadedFileInfo.file_size / 1024).toFixed(1)} KB</p>
-              <p>Type: {uploadedFileInfo.file_type}</p>
-            </div>
-          </div>
-        </Card>
+        <dl className="grid grid-cols-3 gap-3 rounded-md bg-ok-soft p-3 text-sm">
+          <div><dt className="text-muted-foreground">{t("File")}</dt><dd className="code-text break-all text-xs text-ink">{uploadedFileInfo.filename}</dd></div>
+          <div><dt className="text-muted-foreground">{t("Size")}</dt><dd className="measured text-ink">{(uploadedFileInfo.file_size / 1024).toFixed(1)} KB</dd></div>
+          <div><dt className="text-muted-foreground">{t("Type")}</dt><dd className="text-ink">{uploadedFileInfo.file_type}</dd></div>
+        </dl>
       )}
     </div>
   );

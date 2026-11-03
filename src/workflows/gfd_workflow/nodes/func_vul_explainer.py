@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from langchain_core.runnables import RunnableConfig
 import logging
 from src.workflows.gfd_workflow.graph.state import State
+from src.utils.language import language_instruction
 
 
 def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
@@ -34,7 +35,7 @@ def explain_vulnerability_func(state: State, config: RunnableConfig) -> State:
             "Your analysis should be short and only include these headings:\n"
             "1.  **Vulnerability Explaination:** Explain why this function have vulnerability.\n"
             "2.  **Impact:** Describe the potential consequences if this vulnerability is exploited (e.g., unfair advantage, locked funds).\n"
-        )
+        ) + language_instruction(state.get("language"))
         try:
             response = llm.invoke(prompt)
             answer = response.content.strip()

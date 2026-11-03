@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { MessageSquare, X, Send, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +8,7 @@ import { toast } from "sonner";
 import { refactorBotService, ConversationMessage, RefactoringSuggestion } from "@/services/refactorbot";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useT } from "@/i18n";
 
 interface VulnerableFunction {
   function_name: string;
@@ -23,6 +22,7 @@ interface RefactorChatbotProps {
 }
 
 export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) => {
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFunction, setSelectedFunction] = useState<VulnerableFunction | null>(null);
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
@@ -100,10 +100,10 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
         }
       }));
 
-      toast.success("Analysis complete!");
+      toast.success(t("Analysis complete"));
     } catch (error) {
       console.error("Error getting refactoring advice:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to analyze function");
+      toast.error(error instanceof Error ? error.message : t("Failed to analyze function"));
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +158,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
 
     } catch (error) {
       console.error("Error continuing conversation:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send message");
+      toast.error(error instanceof Error ? error.message : t("Failed to send message"));
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +181,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
       }
     } catch (error) {
       console.error("Error validating code:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to validate code");
+      toast.error(error instanceof Error ? error.message : t("Failed to validate code"));
     } finally {
       setIsLoading(false);
     }
@@ -191,57 +191,59 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
     return null; // Don't show chatbot if no vulnerable functions
   }
 
+  const extraSuggestions = suggestions.filter(s => {
+    if (s.content && explanation && s.content.trim() === explanation.trim()) return false;
+    if (s.content && explanation && explanation.includes(s.content)) return false;
+    if (s.type === 'code_fix') return false;
+    return true;
+  });
+
   return (
     <>
-      {/* Floating Button */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
-          size="icon"
+          variant="secondary"
+          className="fixed bottom-6 right-6 z-50 h-12 gap-2 px-5"
+          aria-label={t("Open Refactor Assistant")}
         >
-          <MessageSquare className="h-6 w-6" />
+          <MessageSquare className="h-4 w-4" />
+          {t("Refactor Assistant")}
+          <span className="measured rounded-sm bg-bad-soft px-1.5 text-xs text-bad">{vulnerableOnly.length}</span>
         </Button>
       )}
 
-      {/* Chatbot Panel */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-[800px] h-[700px] shadow-2xl z-50 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
+        <section
+          aria-label={t("Refactor Assistant")}
+          className="land fixed inset-x-3 bottom-3 top-20 z-50 flex flex-col overflow-hidden rounded-lg border border-rule-2 bg-paper-2 sm:inset-x-auto sm:right-6 sm:top-auto sm:h-[min(700px,calc(100dvh-7rem))] sm:w-[min(800px,calc(100%-3rem))]"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-3">
             <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              <h3 className="font-semibold">Refactor Assistant</h3>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <h3 className="text-base">{t("Refactor Assistant")}</h3>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-primary-foreground/20 text-primary-foreground"
-            >
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsOpen(false)} aria-label={t("Close Refactor Assistant")}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Function Selector */}
-          <div className="p-4 border-b bg-muted/30">
+          <div className="border-b border-rule px-4 py-3">
             <Select
               value={selectedFunction?.function_name || ""}
               onValueChange={handleSelectFunction}
               disabled={isLoading}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a vulnerable function to analyze..." />
+              <SelectTrigger aria-label={t("Vulnerable function")}>
+                <SelectValue placeholder={t("Select a vulnerable function to analyze…")} />
               </SelectTrigger>
               <SelectContent>
                 {vulnerableOnly.map((func) => (
                   <SelectItem key={func.function_name} value={func.function_name}>
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-3 w-3 text-destructive" />
-                      <span>{func.function_name}</span>
-                      <Badge variant="outline" className="text-xs ml-auto">
-                        {func.confidence}
-                      </Badge>
+                      <AlertTriangle className="h-3 w-3 text-bad" aria-hidden="true" />
+                      <span className="code-text text-xs">{func.function_name}</span>
+                      <span className="measured ml-auto text-xs text-cool">{func.confidence}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -249,146 +251,108 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
             </Select>
           </div>
 
-          {/* Chat Messages */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 px-4 py-4">
             {!selectedFunction ? (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                <MessageSquare className="h-12 w-12 mb-3 opacity-50" />
-                <p className="text-sm">Select a vulnerable function to start analysis</p>
+              <div className="flex h-full flex-col items-start justify-center gap-2 py-16 text-sm text-muted-foreground">
+                <p className="text-ink-2">{t("Select a vulnerable function to start analysis")}</p>
+                <p>{t("{n} flagged in this contract.", { n: vulnerableOnly.length })}</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Initial Function Display */}
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Analyzing:</p>
-                  <p className="text-sm font-medium mb-2">{selectedFunction.function_name}</p>
-                  <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
-                    {selectedFunction.function_code.slice(0, 200)}...
+              <div className="space-y-5">
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("Analyzing")}</p>
+                  <p className="code-text mt-1 break-all text-sm text-ink">{selectedFunction.function_name}</p>
+                  <pre className="code-text well mt-2 overflow-x-auto p-3 text-xs text-ink-2">
+                    {selectedFunction.function_code.slice(0, 200)}…
                   </pre>
                 </div>
 
-                {/* Conversation Messages */}
                 {conversationHistory.map((message, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg p-3 ${
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
-                      {message.role === "user" ? (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      ) : (
-                        <div className="text-sm prose dark:prose-invert max-w-none">
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                code({node, inline, className, children, ...props}: any) {
-                                  const match = /language-(\w+)/.exec(className || '')
-                                  return !inline && match ? (
-                                    <pre className="bg-background p-2 rounded overflow-x-auto my-2">
-                                      <code className={className} {...props}>
-                                        {children}
-                                      </code>
-                                    </pre>
-                                  ) : (
-                                    <code className="bg-background px-1 py-0.5 rounded font-mono text-xs" {...props}>
-                                      {children}
-                                    </code>
-                                  )
-                                }
-                              }}
-                            >
-                              {message.content}
-                            </ReactMarkdown>
-                        </div>
-                      )}
-                    </div>
+                  <div key={idx} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {message.role === "user" ? (
+                      <p className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-paper-3 px-3 py-2 text-sm text-ink">{message.content}</p>
+                    ) : (
+                      <div className="chat-prose max-w-[92%] border-l border-rule-2 pl-4">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({node, inline, className, children, ...props}: any) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline && match ? (
+                                <pre>
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                </pre>
+                              ) : (
+                                <code {...props}>
+                                  {children}
+                                </code>
+                              )
+                            }
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 ))}
 
-                {/* Suggested Code */}
                 {suggestedCode && (
-                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-green-800 dark:text-green-200">
-                        Suggested Refactored Code:
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleValidateCode}
-                        disabled={isLoading}
-                        className="h-7 text-xs"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Validate
+                  <div className="rounded-md bg-ok-soft p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-xs text-ok">{t("Suggested Refactored Code")}</p>
+                      <Button size="sm" variant="outline" onClick={handleValidateCode} disabled={isLoading}>
+                        <CheckCircle className="h-3 w-3" />
+                        {t("Validate")}
                       </Button>
                     </div>
-                    <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
+                    <pre className="code-text overflow-x-auto rounded-sm bg-paper p-3 text-xs text-ink-2">
                       {suggestedCode}
                     </pre>
                   </div>
                 )}
 
-                {/* Suggestions - Filter out duplicates or generic advice already in chat */}
-                {suggestions.length > 0 && (
-                  <div className="space-y-2">
-                    {suggestions.filter(s => {
-                         // Don't show if it's identical to the main explanation
-                         if (s.content && explanation && s.content.trim() === explanation.trim()) return false;
-                         // Don't show if explanation already contains this suggestion completely
-                         if (s.content && explanation && explanation.includes(s.content)) return false;
-                         // Don't show if it's just code (already handled)
-                         if (s.type === 'code_fix') return false;
-                         return true;
-                    }).map((suggestion, idx) => (
-                      <div key={idx} className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                          {suggestion.description}
-                        </p>
+                {extraSuggestions.length > 0 && (
+                  <ul className="divide-y divide-rule border-y border-rule">
+                    {extraSuggestions.map((suggestion, idx) => (
+                      <li key={idx} className="py-3">
+                        <p className="text-sm text-ink">{suggestion.description}</p>
                         {suggestion.content && (
-                          <p className="text-xs text-blue-700 dark:text-blue-300">
-                            {suggestion.content.slice(0, 150)}...
-                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">{suggestion.content.slice(0, 150)}…</p>
                         )}
                         {suggestion.url && (
                           <a
                             href={suggestion.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                            className="mt-1 inline-block text-xs text-cool underline decoration-rule-2 underline-offset-4 hover:text-signal"
                           >
-                            Learn more →
+                            {t("Read the reference")}
                           </a>
                         )}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
 
-                {/* Loading */}
                 {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  </div>
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                    <Loader2 className="keep-motion h-4 w-4 animate-spin" aria-hidden="true" />
+                    {t("Thinking…")}
+                  </p>
                 )}
               </div>
             )}
           </ScrollArea>
 
-          {/* Input Area */}
           {selectedFunction && (
-            <div className="p-4 border-t bg-muted/30">
-              <div className="flex gap-2">
+            <div className="border-t border-rule p-3">
+              <div className="flex items-end gap-2">
                 <Textarea
-                  placeholder="Ask follow-up questions..."
+                  aria-label={t("Follow-up question")}
+                  placeholder={t("Ask follow-up questions…")}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -397,24 +361,22 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                       handleSendMessage();
                     }
                   }}
-                  className="min-h-[60px] resize-none"
+                  className="min-h-[3.75rem] resize-none"
                   disabled={isLoading}
                 />
                 <Button
                   size="icon"
                   onClick={handleSendMessage}
                   disabled={isLoading || !inputMessage.trim()}
+                  aria-label={t("Send")}
+                  aria-busy={isLoading}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+                  {isLoading ? <Loader2 className="keep-motion h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
           )}
-        </Card>
+        </section>
       )}
     </>
   );
