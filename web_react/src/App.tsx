@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { usePreferences } from "@/lib/preferences";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -16,6 +18,14 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const LanguageSync = () => {
+  const { language } = usePreferences();
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+  return null;
+};
+
 const LegacyProjectRedirect = () => {
   const { projectId } = useParams();
   return <Navigate to={`/project/${projectId}`} replace />;
@@ -27,6 +37,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
+        <LanguageSync />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
