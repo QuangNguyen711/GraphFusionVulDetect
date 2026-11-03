@@ -10,6 +10,8 @@ from src.workflows.chatbot_workflow.graph.state import State
 logger = logging.getLogger(__name__)
 
 
+from src.utils.language import language_instruction
+
 def analyze_code(state: State, config: RunnableConfig) -> State:
     """
     Analyze the code and issue description to understand the context.
@@ -54,6 +56,7 @@ def analyze_code(state: State, config: RunnableConfig) -> State:
             "2. Potential vulnerabilities or issues\n"
             "3. Areas that need refactoring\n"
         )
+        prompt += language_instruction(state.get("language"))
         
         print(f"Sending prompt to LLM (length: {len(prompt)} chars)")
         print(f"Prompt: {prompt}")

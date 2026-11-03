@@ -20,7 +20,7 @@ class RefactorBotService:
         self.workflow = chatbot_workflow
         logger.info("RefactorBotService initialized")
 
-    async def get_refactoring_advice(self, code: str, issue_description: str) -> Dict[str, Any]:
+    async def get_refactoring_advice(self, code: str, issue_description: str, language: str = "en") -> Dict[str, Any]:
         """
         Requests refactoring advice from the LLM based on the provided code and issue.
 
@@ -47,7 +47,8 @@ class RefactorBotService:
             result = await self.workflow.arun(
                 code=code,
                 issue_description=issue_description,
-                conversation_history=None
+                conversation_history=None,
+                language=language
             )
             
             logger.info("Workflow execution completed successfully")
@@ -75,7 +76,7 @@ class RefactorBotService:
                 "error": str(e)
             }
 
-    async def get_code_fix_conversation(self, conversation_history: List[Dict[str, str]], current_code: str) -> Dict[str, Any]:
+    async def get_code_fix_conversation(self, conversation_history: List[Dict[str, str]], current_code: str, language: str = "en") -> Dict[str, Any]:
         """
         Engages in a conversation with the LLM to iteratively fix code.
 
@@ -103,7 +104,8 @@ class RefactorBotService:
             result = await self.workflow.arun(
                 code=current_code,
                 issue_description=issue_description,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                language=language
             )
             
             # Extract bot response

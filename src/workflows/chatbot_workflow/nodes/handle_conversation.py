@@ -11,6 +11,8 @@ from src.workflows.chatbot_workflow.graph.state import State
 logger = logging.getLogger(__name__)
 
 
+from src.utils.language import language_instruction
+
 def handle_conversation(state: State, config: RunnableConfig) -> State:
     """
     Handle conversational interactions for iterative code refinement.
@@ -49,7 +51,7 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
         # Add current code context
         last_user_message = conversation_history[-1]["content"] if conversation_history else ""
         
-        prompt = f"Current code under discussion:\n```solidity\n{code}\n```\n\n{last_user_message}"
+        prompt = f"Current code under discussion:\n```solidity\n{code}\n```\n\n{last_user_message}" + language_instruction(state.get("language"))
         
         print(f"Sending conversation prompt to LLM (history length: {len(conversation_history)})")
         print(f"Last user message: {last_user_message}...")
