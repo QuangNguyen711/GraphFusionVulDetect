@@ -1,8 +1,11 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import UserProfile from '@/components/UserProfile';
-import { Shield } from 'lucide-react';
+import { NavLink } from '@/components/NavLink';
+import { Wordmark } from '@/components/Wordmark';
+
+const navLink = "relative inline-flex h-10 items-center whitespace-nowrap text-sm text-muted-foreground transition-colors duration-200 hover:text-ink";
+const navActive = "text-ink after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-signal";
 
 const Header = () => {
   const { isAuthenticated } = useAuth();
@@ -12,40 +15,24 @@ const Header = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo và tên ứng dụng */}
-          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-            <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-xl">
-              <Shield className="h-6 w-6 text-primary" />
-            </div>
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold text-foreground">GraphFusion</h1>
-              <p className="text-xs text-muted-foreground">Vulnerability Detector</p>
-            </div>
-          </Link>
+    <header className="sticky top-0 z-50 w-full border-b border-rule bg-paper">
+      <div className="shell flex h-16 items-center gap-4 sm:gap-6">
+        <Link to="/" className="flex items-baseline gap-3 rounded-sm" aria-label="GraphFusion home">
+          <Wordmark />
+          <span className="hidden text-xs text-muted-foreground lg:inline">Vulnerability Detector</span>
+        </Link>
 
-          {/* Navigation links */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link 
-              to="/" 
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              New Analysis
-            </Link>
-            <Link 
-              to="/projects" 
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Projects
-            </Link>
-          </nav>
+        <nav className="flex items-center gap-4 sm:ml-6 sm:gap-5" aria-label="Main">
+          <NavLink to="/analysis" end className={navLink} activeClassName={navActive}>
+            New Analysis
+          </NavLink>
+          <NavLink to="/project" className={navLink} activeClassName={navActive}>
+            Projects
+          </NavLink>
+        </nav>
 
-          {/* User Profile */}
-          <div className="flex items-center">
-            <UserProfile />
-          </div>
+        <div className="ml-auto flex items-center">
+          <UserProfile />
         </div>
       </div>
     </header>

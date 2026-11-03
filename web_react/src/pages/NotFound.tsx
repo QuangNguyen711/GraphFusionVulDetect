@@ -1,5 +1,6 @@
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { Wordmark } from "@/components/Wordmark";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,15 +10,20 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </a>
+    <main id="main" className="shell flex min-h-dvh flex-col justify-center gap-8 bg-background py-16">
+      <Wordmark />
+      <div className="ticks max-w-xl px-8 py-10">
+        <p className="reading">404</p>
+        <h1 className="mt-4 text-2xl">Page not found</h1>
+        <p className="code-text mt-2 break-all text-sm text-muted-foreground">{location.pathname}</p>
       </div>
-    </div>
+      <Link
+        to="/"
+        className="self-start text-ink underline decoration-rule-2 underline-offset-4 transition-colors duration-200 hover:text-signal hover:decoration-signal"
+      >
+        Return to Home
+      </Link>
+    </main>
   );
 };
 

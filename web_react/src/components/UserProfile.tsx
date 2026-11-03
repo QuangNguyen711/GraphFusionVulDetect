@@ -60,7 +60,8 @@ const UserProfile = () => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className="relative h-10 w-10 rounded-full ring-2 ring-primary/20 hover:ring-primary/40 transition-all"
+          aria-label="Account"
+          className="relative h-10 w-10 rounded-full p-0"
         >
           <Avatar className="h-10 w-10">
             <AvatarImage 
@@ -68,7 +69,7 @@ const UserProfile = () => {
               alt={user.name}
               className="object-cover"
             />
-            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-semibold">
+            <AvatarFallback className="bg-paper-3 text-sm text-ink">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
@@ -85,7 +86,7 @@ const UserProfile = () => {
                   alt={user.name}
                   className="object-cover"
                 />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-semibold text-lg">
+                <AvatarFallback className="bg-paper-3 text-base text-ink">
                   {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
@@ -132,7 +133,7 @@ const UserProfile = () => {
         <DropdownMenuSeparator />
         
         <DropdownMenuItem 
-          className="cursor-pointer text-red-600 focus:text-red-600"
+          className="cursor-pointer text-bad focus:text-bad"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

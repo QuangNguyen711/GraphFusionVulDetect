@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/AuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Login = () => {
@@ -35,7 +35,7 @@ const Login = () => {
     
     if (success) {
       toast.success('Đăng nhập thành công!');
-      navigate('/');
+      navigate('/analysis');
     } else {
       setError('Email hoặc mật khẩu không đúng');
       toast.error('Đăng nhập thất bại');
@@ -43,21 +43,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-      
-      <Card className="w-full max-w-md glass relative z-10">
-        <CardHeader className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl shadow-glow mx-auto w-fit">
-            <Shield className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>
-          <CardDescription>
-            Nhập thông tin đăng nhập để truy cập hệ thống
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
+    <AuthLayout title="Đăng nhập" description="Nhập thông tin đăng nhập để truy cập hệ thống">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -94,8 +80,9 @@ const Login = () => {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-2"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                   disabled={isLoading}
                 >
                   {showPassword ? (
@@ -109,34 +96,32 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full gradient-primary shadow-glow"
+              className="w-full" aria-busy={isLoading}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang đăng nhập...
+                  <Loader2 className="keep-motion h-4 w-4 animate-spin" />
+                  Đang đăng nhập…
                 </>
               ) : (
                 'Đăng nhập'
               )}
             </Button>
 
-            <div className="text-center space-y-2">
+            <div className="border-t border-rule pt-5">
               <p className="text-sm text-muted-foreground">
                 Chưa có tài khoản?{' '}
                 <Link
                   to="/register"
-                  className="font-medium text-primary hover:underline"
+                  className="text-ink underline decoration-rule-2 underline-offset-4 transition-colors duration-200 hover:text-signal hover:decoration-signal"
                 >
                   Đăng ký ngay
                 </Link>
               </p>
             </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthLayout>
   );
 };
 

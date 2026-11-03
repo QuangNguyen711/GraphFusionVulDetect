@@ -1,22 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
-import { 
-  ArrowLeft, 
-  Activity, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
-  FileText,
-  BarChart3,
-  Calendar,
-  Play,
-  Folder,
-  Upload
-} from "lucide-react";
+import { ArrowLeft, Activity, XCircle, Play, Upload } from "lucide-react";
 import { StreamingResults } from "@/components/StreamingResults";
 import { ContractVisualization } from "@/components/ContractVisualization";
 import { RefactorChatbot } from "@/components/RefactorChatbot";
@@ -63,35 +50,23 @@ const ProjectAnalysis = () => {
     } catch (error) {
       console.error("Error loading project data:", error);
       toast.error("Failed to load project data");
-      navigate("/projects");
+      navigate("/project");
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case "processing":
-        return <Activity className="h-4 w-4 text-primary animate-pulse" />;
+      case "analyzing":
+        return "signal" as const;
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return "secondary" as const;
       case "failed":
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return "destructive" as const;
       default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "processing":
-        return "bg-primary/10 text-primary border-primary/20";
-      case "completed":
-        return "bg-success/10 text-success border-success/20";
-      case "failed":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      default:
-        return "bg-muted/10 text-muted-foreground border-muted/20";
+        return "outline" as const;
     }
   };
 
@@ -138,7 +113,7 @@ const ProjectAnalysis = () => {
       sessionStorage.setItem("contractFile", selectedFile.content);
 
       toast.success("Analysis started!");
-      navigate("/analysis");
+      navigate("/analysis/live");
     } catch (error) {
       console.error("Error starting analysis:", error);
       toast.error("Failed to start analysis");
@@ -152,310 +127,198 @@ const ProjectAnalysis = () => {
   };
 
   const handleBackToProjects = () => {
-    navigate("/projects");
+    navigate("/project");
   };
+
+  const toResults = (session: AnalysisSession) =>
+    (session.steps || []).map(step => ({
+      node: step.step_name,
+      status: step.status,
+      output: step.result_data,
+      timestamp: step.started_at
+    }));
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <Header />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="flex items-center gap-3">
-              <Activity className="h-6 w-6 animate-spin" />
-              <span className="text-lg">Loading project...</span>
-            </div>
-          </div>
-        </div>
+        <main id="main" className="shell py-12" role="status">
+          <span className="block h-4 w-32 animate-pulse rounded-sm bg-paper-3" />
+          <span className="mt-6 block h-10 w-2/3 max-w-xl animate-pulse rounded-sm bg-paper-3" />
+          <span className="mt-10 block h-64 animate-pulse rounded-md bg-paper-2" />
+          <span className="sr-only">Loading project…</span>
+        </main>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <Header />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                Project not found
-              </h2>
-              <Button onClick={handleBackToProjects}>
-                Back to Projects
-              </Button>
-            </div>
-          </div>
-        </div>
+        <main id="main" className="shell py-16">
+          <h1 className="text-3xl">Project not found</h1>
+          <Button onClick={handleBackToProjects} variant="outline" className="mt-6">
+            Back to Projects
+          </Button>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Header />
-      
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleBackToProjects}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Projects
-          </Button>
-          
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => setShowNewAnalysis(!showNewAnalysis)}
-              className="gap-2 gradient-primary"
-            >
-              <Upload className="h-4 w-4" />
-              {showNewAnalysis ? "Hide Upload" : "New Analysis"}
-            </Button>
-          </div>
-        </div>
 
-        {/* Project Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="glass p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <TruncatedText 
-                      text={project.name}
-                      maxLines={2}
-                      className="text-3xl font-bold text-foreground mb-2"
-                    />
-                    {project.description && (
-                      <TruncatedText 
-                        text={project.description}
-                        maxLines={3}
-                        className="text-muted-foreground"
-                      />
-                    )}
-                  </div>
-                  <div className="flex-shrink-0 ml-4">
-                    <Badge 
-                      variant="outline" 
-                      className={getStatusColor(project.status)}
-                    >
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(project.status)}
-                        <span className="capitalize whitespace-nowrap">
-                          {project.status}
-                        </span>
-                      </div>
-                    </Badge>
-                  </div>
-                </div>
+      <main id="main" className="shell py-10 lg:py-12">
+        <Button variant="link" onClick={handleBackToProjects} className="gap-2 text-sm text-ink-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Projects
+        </Button>
 
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm font-medium">
-                        {project.files.length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Files
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm font-medium">
-                        {project.analysis_count}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Analyses
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-xs text-muted-foreground">
-                        Created
-                      </div>
-                      <div className="text-sm font-medium">
-                        {formatDate(project.created_at)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <div className="mt-6 flex flex-wrap items-start justify-between gap-6 border-b border-rule pb-8">
+          <div className="min-w-0 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="min-w-0 text-4xl leading-none">
+                <TruncatedText text={project.name} maxLines={2} />
+              </h1>
+              <Badge variant={getStatusVariant(project.status)}>
+                <span className="capitalize">{project.status}</span>
+              </Badge>
+            </div>
+            {project.description && (
+              <TruncatedText text={project.description} maxLines={3} className="mt-3 block text-ink-2" />
+            )}
+            <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Files</dt>
+                <dd className="measured mt-1 text-lg text-ink">{project.files.length}</dd>
               </div>
-            </Card>
+              <div className="border-l border-rule pl-8">
+                <dt className="text-muted-foreground">Analyses</dt>
+                <dd className="measured mt-1 text-lg text-ink">{project.analysis_count}</dd>
+              </div>
+              <div className="border-l border-rule pl-8">
+                <dt className="text-muted-foreground">Created</dt>
+                <dd className="measured mt-1 text-lg text-ink">{formatDate(project.created_at)}</dd>
+              </div>
+            </dl>
           </div>
 
-          {/* Analysis Sessions Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="glass p-6 h-full">
-              <h3 className="font-semibold text-foreground mb-4">
-                Analysis History
-              </h3>
-              
-              {analysisSessions.length === 0 ? (
-                <div className="text-center py-8 space-y-2">
-                  <Folder className="h-8 w-8 text-muted-foreground/50 mx-auto" />
-                  <p className="text-sm text-muted-foreground">
-                    No analysis sessions yet
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {analysisSessions.map((session, index) => (
-                    <div
-                      key={session.id || `session-${index}`}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedSession?.id === session.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                      onClick={() => handleSessionClick(session)}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <TruncatedText 
-                            text={session.filename}
-                            maxLines={2}
-                            className="text-sm font-medium leading-tight"
-                          />
-                        </div>
-                        <div className="flex-shrink-0">
-                          <Badge 
-                            variant="outline" 
-                            className={getStatusColor(session.status)}
-                          >
-                            {getStatusIcon(session.status)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {formatDate(session.started_at)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
+          <Button onClick={() => setShowNewAnalysis(!showNewAnalysis)} aria-expanded={showNewAnalysis}>
+            <Upload className="h-4 w-4" />
+            {showNewAnalysis ? "Hide Upload" : "New Analysis"}
+          </Button>
         </div>
 
-        {/* New Analysis Upload */}
         {showNewAnalysis && (
-          <Card className="glass p-6">
-            <h3 className="font-semibold text-foreground mb-4">
-              Start New Analysis
-            </h3>
-            <div className="space-y-4">
+          <section className="land border-b border-rule py-8" aria-labelledby="new-run-head">
+            <h2 id="new-run-head" className="text-xl">Start New Analysis</h2>
+            <div className="mt-5 max-w-2xl space-y-4">
               <FileUpload onFileSelect={handleFileSelect} />
               {selectedFile && (
-                <Button
-                  onClick={handleStartNewAnalysis}
-                  disabled={isAnalyzing}
-                  className="w-full gradient-primary"
-                >
+                <Button onClick={handleStartNewAnalysis} disabled={isAnalyzing} variant="outline" aria-busy={isAnalyzing}>
                   {isAnalyzing ? (
                     <>
-                      <Activity className="mr-2 h-4 w-4 animate-spin" />
-                      Starting Analysis...
+                      <Activity className="keep-motion h-4 w-4 animate-spin" />
+                      Starting Analysis…
                     </>
                   ) : (
                     <>
-                      <Play className="mr-2 h-4 w-4" />
+                      <Play className="h-4 w-4" />
                       Start Analysis
                     </>
                   )}
                 </Button>
               )}
             </div>
-          </Card>
+          </section>
         )}
 
-        {/* Analysis Results */}
-        {selectedSession && (
-          <div className="space-y-6">
-            <Card className="glass p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex-1 min-w-0">
-                  <TruncatedText 
-                    text={`Analysis Results: ${selectedSession.filename}`}
-                    maxLines={2}
-                    className="font-semibold text-foreground leading-tight"
-                  />
-                </div>
-                <div className="flex-shrink-0">
-                  <Badge 
-                    variant="outline" 
-                    className={getStatusColor(selectedSession.status)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(selectedSession.status)}
-                      <span className="capitalize whitespace-nowrap">
-                        {selectedSession.status}
-                      </span>
-                    </div>
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] lg:gap-12">
+          <aside aria-labelledby="history-head">
+            <h2 id="history-head" className="text-sm text-muted-foreground">Analysis History</h2>
+            {analysisSessions.length === 0 ? (
+              <p className="mt-4 text-sm text-ink-2">
+                No analysis sessions yet. Use New Analysis to scan a file.
+              </p>
+            ) : (
+              <ol className="mt-4 border-l border-rule-2">
+                {analysisSessions.map((session, index) => {
+                  const selected = selectedSession?.id === session.id;
+                  return (
+                    <li key={session.id || `session-${index}`}>
+                      <button
+                        type="button"
+                        aria-current={selected ? "true" : undefined}
+                        className={`relative -ml-px block w-full border-l py-3 pl-4 pr-2 text-left transition-colors duration-200 hover:bg-paper-2 ${
+                          selected ? "border-signal bg-paper-2" : "border-transparent"
+                        }`}
+                        onClick={() => handleSessionClick(session)}
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <TruncatedText text={session.filename} maxLines={1} className="code-text text-sm text-ink" showTooltip={false} />
+                          {session.status !== "completed" && (
+                            <Badge variant={getStatusVariant(session.status)}>
+                              <span className="capitalize">{session.status}</span>
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="measured mt-1 block text-xs text-cool">{formatDate(session.started_at)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </aside>
+
+          <div className="min-w-0 space-y-10">
+            {selectedSession ? (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-sm text-muted-foreground">
+                    Analysis Results: <span className="code-text text-ink">{selectedSession.filename}</span>
+                  </h2>
+                  <Badge variant={getStatusVariant(selectedSession.status)}>
+                    <span className="capitalize">{selectedSession.status}</span>
                   </Badge>
                 </div>
-              </div>
-              
-              {selectedSession.error_message && (
-                <Card className="border-destructive bg-destructive/10 p-4 mb-4">
-                  <div className="flex items-start gap-3">
-                    <XCircle className="h-5 w-5 text-destructive mt-0.5" />
+
+                {selectedSession.error_message && (
+                  <div role="alert" className="flex items-start gap-3 rounded-md bg-bad-soft p-4">
+                    <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-bad" aria-hidden="true" />
                     <div>
-                      <h4 className="font-semibold text-destructive mb-1">Analysis Error</h4>
-                      <p className="text-sm text-destructive/90">{selectedSession.error_message}</p>
+                      <h3 className="text-base text-bad">Analysis Error</h3>
+                      <p className="mt-1 text-sm text-ink-2">{selectedSession.error_message}</p>
                     </div>
                   </div>
-                </Card>
-              )}
+                )}
 
-              {selectedSession.steps && selectedSession.steps.length > 0 && (
-                <StreamingResults 
-                  results={selectedSession.steps.map(step => ({
-                    node: step.step_name,
-                    status: step.status,
-                    output: step.result_data,
-                    timestamp: step.started_at
-                  }))} 
-                  isStreaming={false} 
-                />
-              )}
-            </Card>
+                {selectedSession.status === 'completed' && selectedSession.steps && (
+                  <ContractVisualization data={toResults(selectedSession)} />
+                )}
 
-            {/* Visualization for completed analysis */}
-            {selectedSession.status === 'completed' && selectedSession.steps && (
-              <ContractVisualization 
-                data={selectedSession.steps.map(step => ({
-                  node: step.step_name,
-                  status: step.status,
-                  output: step.result_data,
-                  timestamp: step.started_at
-                }))} 
-              />
+                {selectedSession.steps && selectedSession.steps.length > 0 && (
+                  <StreamingResults results={toResults(selectedSession)} isStreaming={false} />
+                )}
+              </>
+            ) : (
+              <p className="text-ink-2">Pick a session on the left, or start a new analysis.</p>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      </main>
 
-      {/* Refactor Chatbot */}
       {selectedSession && (
-        <RefactorChatbot 
+        <RefactorChatbot
           vulnerableFunctions={
             selectedSession.steps
               ?.flatMap(step => step.result_data?.func_vulnerability_predictions || [])
-              .filter((func, index, self) => 
+              .filter((func, index, self) =>
                 index === self.findIndex(f => f.function_name === func.function_name)
               ) || []
-          } 
+          }
         />
       )}
     </div>

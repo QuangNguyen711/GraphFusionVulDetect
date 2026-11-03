@@ -13,11 +13,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Đang kiểm tra đăng nhập...</p>
-        </div>
+      <div className="flex min-h-dvh items-center justify-center bg-background" role="status">
+        <p className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="keep-motion h-4 w-4 animate-spin text-signal" aria-hidden="true" />
+          Đang kiểm tra đăng nhập…
+        </p>
       </div>
     );
   }

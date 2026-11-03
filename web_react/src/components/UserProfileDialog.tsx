@@ -163,7 +163,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
                 alt={user.name}
                 className="object-cover"
               />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-semibold text-2xl">
+              <AvatarFallback className="bg-paper-3 text-2xl text-ink">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
