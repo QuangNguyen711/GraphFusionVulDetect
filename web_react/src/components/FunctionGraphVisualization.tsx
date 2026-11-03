@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
@@ -52,12 +51,9 @@ export const FunctionGraphVisualization = ({
     // Set up dimensions
     const width = 800;
     const height = 600;
-    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
 
     const svg = d3
       .select(svgRef.current)
-      .attr("width", "100%")
-      .attr("height", height)
       .attr("viewBox", [0, 0, width, height]);
 
     // Create main group for zoom/pan
@@ -73,47 +69,56 @@ export const FunctionGraphVisualization = ({
     zoomRef.current = zoom;
     svg.call(zoom);
 
-    // Create force simulation
     const simulation = d3
       .forceSimulation(nodes as any)
       .force("link", d3.forceLink(links).id((d: any) => d.id).distance(120))
       .force("charge", d3.forceManyBody().strength(-400))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(40)); // Increased collision radius
+      .force("collision", d3.forceCollide().radius(40));
 
-    // Add arrow markers for directed edges
     const defs = g.append("defs");
-    
+
     defs.append("marker")
-      .attr("id", "arrow")
+      .attr("id", "fcg-arrow")
       .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 35) // Adjusted for larger node radius
+      .attr("refX", 35)
       .attr("refY", 0)
       .attr("markerWidth", 6)
       .attr("markerHeight", 6)
       .attr("orient", "auto")
       .append("path")
-      .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#666");
+      .attr("class", "fcg-arrow")
+      .attr("d", "M0,-5L10,0L0,5");
 
-    // Create links
     const link = g
       .append("g")
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("stroke", "#666")
-      .attr("stroke-width", 2)
-      .attr("marker-end", "url(#arrow)")
-      .style("opacity", 0.6);
+      .attr("class", "fcg-edge")
+      .attr("marker-end", "url(#fcg-arrow)");
 
-    // Create node groups
+    const openNode = (d: FunctionNode) => {
+      setSelectedNode(d);
+      setIsDialogOpen(true);
+    };
+
     const nodeGroup = g
       .append("g")
       .selectAll("g")
       .data(nodes)
       .join("g")
-      .style("cursor", "pointer")
+      .attr("class", (d) => (d.prediction === 1 ? "fcg-node is-vulnerable" : "fcg-node"))
+      .attr("style", (_d, i) => `--i: ${Math.min(i, 12)}`)
+      .attr("tabindex", 0)
+      .attr("role", "button")
+      .attr("aria-label", (d) => `${d.function_name}, ${d.prediction === 1 ? "vulnerable" : "safe"}, confidence ${d.confidence}`)
+      .on("keydown", (event: KeyboardEvent, d) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openNode(d);
+        }
+      })
       .call(d3.drag<SVGGElement, FunctionNode>()
         .on("start", (event, d: any) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -131,58 +136,33 @@ export const FunctionGraphVisualization = ({
         })
       );
 
-    // Add circles for nodes
     nodeGroup
       .append("circle")
-      .attr("r", 30) // Increased radius to accommodate longer text
-      .attr("fill", (d) => d.prediction === 1 ? "#ef4444" : "#22c55e") // Red for vulnerable, green for safe
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 2)
-      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
+      .attr("r", 30)
       .on("mouseenter", function(event, d) {
-        // Show tooltip
         const tooltip = d3.select("body")
           .append("div")
-          .attr("class", "tooltip")
-          .style("position", "absolute")
-          .style("background", "rgba(0, 0, 0, 0.8)")
-          .style("color", "white")
-          .style("padding", "8px 12px")
-          .style("border-radius", "4px")
-          .style("font-size", "12px")
-          .style("pointer-events", "none")
-          .style("z-index", "1000")
+          .attr("class", "fcg-tip")
           .html(`
-            <div><strong>${d.function_name}</strong></div>
+            <div><b>${d.function_name}</b></div>
             <div>Status: ${d.prediction === 1 ? 'Vulnerable' : 'Safe'}</div>
             <div>Confidence: ${d.confidence}</div>
           `);
 
         const [x, y] = d3.pointer(event, document.body);
         tooltip
-          .style("left", (x + 10) + "px")
-          .style("top", (y - 10) + "px");
-
-        // Highlight node
-        d3.select(this).attr("r", 35).style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+          .style("left", (x + 12) + "px")
+          .style("top", (y - 12) + "px");
       })
       .on("mouseleave", function() {
-        // Remove tooltip
-        d3.selectAll(".tooltip").remove();
-        
-        // Reset node
-        d3.select(this).attr("r", 30).style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        d3.selectAll(".fcg-tip").remove();
       })
-      .on("click", (event, d) => {
-        setSelectedNode(d);
-        setIsDialogOpen(true);
-      });
+      .on("click", (_event, d) => openNode(d));
 
     // Function to wrap text for node labels
     const wrapText = (text: string, maxLength: number) => {
       if (text.length <= maxLength) return [text];
-      
-      // Try to split at dots first (for method names like SafeMath.add)
+
       const parts = text.split('.');
       if (parts.length > 1) {
         const className = parts[0];
@@ -191,39 +171,29 @@ export const FunctionGraphVisualization = ({
           return [className, methodName];
         }
       }
-      
-      // Fallback: split at maxLength
+
       const lines = [];
       for (let i = 0; i < text.length; i += maxLength) {
         lines.push(text.slice(i, i + maxLength));
       }
-      return lines.slice(0, 3); // Max 3 lines
+      return lines.slice(0, 3);
     };
 
-    // Add labels with text wrapping
     nodeGroup.each(function(d) {
       const group = d3.select(this);
-      
-      // Extract function name without parameters
-      const fullName = d.function_name;
-      const functionNameOnly = fullName.split('(')[0]; // Remove parameters
-      const wrappedLines = wrapText(functionNameOnly, 12); // Max 12 chars per line
-      
+      const functionNameOnly = d.function_name.split('(')[0];
+      const wrappedLines = wrapText(functionNameOnly, 12);
+
       wrappedLines.forEach((line, index) => {
         group
           .append("text")
           .text(line)
           .attr("text-anchor", "middle")
-          .attr("dy", `${(index - (wrappedLines.length - 1) / 2) * 12 + 3}px`) // Center vertically
-          .attr("fill", "white")
-          .attr("font-size", "10px")
-          .attr("font-weight", "bold")
-          .style("pointer-events", "none");
+          .attr("dy", `${(index - (wrappedLines.length - 1) / 2) * 12 + 3}px`);
       });
     });
 
-    // Update positions on simulation tick
-    simulation.on("tick", () => {
+    const ticked = () => {
       link
         .attr("x1", (d: any) => d.source.x)
         .attr("y1", (d: any) => d.source.y)
@@ -231,8 +201,19 @@ export const FunctionGraphVisualization = ({
         .attr("y2", (d: any) => d.target.y);
 
       nodeGroup.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
-    });
+    };
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      simulation.stop();
+      simulation.tick(300);
+      ticked();
+    }
+    simulation.on("tick", ticked);
+
+    return () => {
+      simulation.stop();
+      d3.selectAll(".fcg-tip").remove();
+    };
   }, [fcgEdges, funcVulnerabilityPredictions]);
 
   const handleZoomIn = () => {
@@ -262,96 +243,78 @@ export const FunctionGraphVisualization = ({
     }
   };
 
+  const vulnerableCount = funcVulnerabilityPredictions.filter((f) => f.prediction === 1).length;
+
   return (
-    <div className="space-y-4">
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-semibold">Function Call Graph</h4>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4" />
+    <div>
+      <figure className="panel overflow-hidden">
+        <figcaption className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3">
+          <h4 className="text-base">Function Call Graph</h4>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn} aria-label="Zoom in">
+              <ZoomIn />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut} aria-label="Zoom out">
+              <ZoomOut />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <RotateCcw className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleReset} aria-label="Reset view">
+              <RotateCcw />
             </Button>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-red-500"></div>
-            <span>Vulnerable Functions</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-green-500"></div>
-            <span>Safe Functions</span>
-          </div>
-          <span className="text-muted-foreground">
-            Click nodes to view function code • Drag to move • Scroll to zoom
+        </figcaption>
+
+        <svg
+          ref={svgRef}
+          className="fcg"
+          role="group"
+          aria-label={`Function call graph: ${funcVulnerabilityPredictions.length} functions, ${vulnerableCount} vulnerable`}
+        />
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-rule px-4 py-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full border border-bad bg-bad-soft" aria-hidden="true" />
+            Vulnerable Functions
           </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full border border-ok bg-ok-soft" aria-hidden="true" />
+            Safe Functions
+          </span>
+          <span className="sm:ml-auto">Click a node to view its code</span>
+          <span>Drag to move</span>
+          <span>Scroll to zoom</span>
         </div>
+      </figure>
 
-        <div className="border rounded-lg overflow-hidden">
-          <svg
-            ref={svgRef}
-            className="w-full bg-slate-50 dark:bg-slate-900"
-            style={{ height: "600px" }}
-          />
-        </div>
-      </Card>
-
-      {/* Function Code Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-h-[80dvh] max-w-4xl overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <span>{selectedNode?.function_name}</span>
-              <Badge 
-                variant={selectedNode?.prediction === 1 ? "destructive" : "default"}
-              >
+            <DialogTitle className="flex flex-wrap items-center gap-3">
+              <span className="code-text min-w-0 break-all text-base">{selectedNode?.function_name}</span>
+              <Badge variant={selectedNode?.prediction === 1 ? "destructive" : "ok"}>
                 {selectedNode?.prediction === 1 ? "Vulnerable" : "Safe"}
-              </Badge>
-              <Badge variant="outline">
-                {selectedNode?.confidence}
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedNode && (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium mb-2">Function Code:</h4>
-                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 overflow-auto max-h-96">
-                  <pre className="text-sm font-mono whitespace-pre-wrap text-black dark:text-white">
-                    {selectedNode.function_code}
-                  </pre>
-                </div>
+                <h4 className="mb-2 text-sm text-muted-foreground">Function Code</h4>
+                <pre className="code-text well max-h-96 overflow-auto p-4 text-sm leading-relaxed text-ink-2">{selectedNode.function_code}</pre>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+
+              <dl className="grid grid-cols-2 border-t border-rule pt-4 text-sm">
                 <div>
-                  <span className="text-sm font-medium">Security Status:</span>
-                  <div className="mt-1">
-                    <Badge 
-                      variant={selectedNode.prediction === 1 ? "destructive" : "default"}
-                      className="text-xs"
-                    >
-                      {selectedNode.prediction === 1 ? "⚠️ Vulnerable" : "✅ Safe"}
-                    </Badge>
-                  </div>
+                  <dt className="text-muted-foreground">Security Status</dt>
+                  <dd className={`mt-1 ${selectedNode.prediction === 1 ? "text-bad" : "text-ok"}`}>
+                    {selectedNode.prediction === 1 ? "Vulnerable" : "Safe"}
+                  </dd>
                 </div>
-                <div>
-                  <span className="text-sm font-medium">Confidence:</span>
-                  <div className="mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      {selectedNode.confidence}
-                    </Badge>
-                  </div>
+                <div className="border-l border-rule pl-4">
+                  <dt className="text-muted-foreground">Confidence</dt>
+                  <dd className="measured mt-1 text-cool">{selectedNode.confidence}</dd>
                 </div>
-              </div>
+              </dl>
             </div>
           )}
         </DialogContent>

@@ -1,216 +1,136 @@
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, Info, XCircle, FileText, Shield, Search } from "lucide-react";
+import { AlertTriangle, XCircle } from "lucide-react";
 import { Accordion, AccordionItem, AccordionContent, AccordionTrigger } from "@/components/ui/accordion";
 import { FunctionGraphVisualization } from "./FunctionGraphVisualization";
+import { PipelineTrail, StageResult } from "./Pipeline";
 
 interface StreamingResultsProps {
   results: any[];
   isStreaming: boolean;
 }
 
+const renderDetail = (result: StageResult) => {
+  const output = result.output;
+  if (!output) return null;
+
+  if (result.node === "convert_to_fcg" && output.fcg_file_path) {
+    return (
+      <dl className="well flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 text-sm">
+        <dt className="text-muted-foreground">FCG File Path</dt>
+        <dd className="code-text min-w-0 break-all text-xs text-ink-2">{output.fcg_file_path}</dd>
+      </dl>
+    );
+  }
+
+  if (result.node === "detect_vulnerability_src") {
+    const vulnerable = output.predicted_class === "Vulnerable";
+    return (
+      <dl className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        <div className="flex items-center gap-2">
+          <dt className="text-muted-foreground">Prediction</dt>
+          <dd><Badge variant={vulnerable ? "destructive" : "ok"}>{output.predicted_class}</Badge></dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="text-muted-foreground">Confidence</dt>
+          <dd className="measured text-cool">{(output.confidence_score * 100).toFixed(2)}%</dd>
+        </div>
+      </dl>
+    );
+  }
+
+  if (result.node === "detect_vulnerability_func") {
+    return (
+      <div className="space-y-6">
+        {output.fcg_edges && output.func_vulnerability_predictions && (
+          <FunctionGraphVisualization
+            fcgEdges={output.fcg_edges}
+            funcVulnerabilityPredictions={output.func_vulnerability_predictions}
+          />
+        )}
+
+        {output.func_vulnerability_predictions && (
+          <div>
+            <h4 className="mb-2 text-sm text-muted-foreground">Function Vulnerability Predictions</h4>
+            <Accordion type="single" collapsible className="border-t border-rule">
+              {output.func_vulnerability_predictions.map((func: any, idx: number) => (
+                <AccordionItem key={idx} value={`function-${idx}`} className="border-rule">
+                  <AccordionTrigger className="min-w-0 gap-3 px-2 py-3 hover:bg-paper-2 hover:no-underline">
+                    <span className="code-text min-w-0 flex-1 truncate text-left text-sm text-ink">{func.function_name}</span>
+                    <Badge variant={func.prediction === 1 ? "destructive" : "ok"}>
+                      {func.prediction === 1 ? "Vulnerable" : "Safe"}
+                    </Badge>
+                    <span className="measured w-12 text-right text-sm text-cool">{func.confidence}</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-2">
+                    <pre className="code-text well overflow-x-auto p-4 text-xs leading-relaxed text-ink-2">{func.function_code}</pre>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        )}
+
+        {output.fcg_edges && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted-foreground hover:text-ink">Function Call Graph Edges</summary>
+            <p className="code-text well mt-2 break-all p-3 text-xs text-ink-2">{JSON.stringify(output.fcg_edges)}</p>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  if (result.node === "explain_vulnerability_func" && output.explanations) {
+    return (
+      <ul className="space-y-3">
+        {output.explanations.map((explanation: any, idx: number) => (
+          <li key={idx} className="rounded-md bg-bad-soft p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-bad" aria-hidden="true" />
+              <div className="min-w-0">
+                <h4 className="code-text break-words text-sm text-ink">{explanation.function_name}</h4>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-2">{explanation.explanation}</p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return null;
+};
+
 export const StreamingResults = ({ results, isStreaming }: StreamingResultsProps) => {
-  const getNodeIcon = (nodeType: string) => {
-    switch (nodeType) {
-      case "convert_to_fcg":
-        return <FileText className="h-5 w-5 text-blue-500" />;
-      case "detect_vulnerability_src":
-        return <Shield className="h-5 w-5 text-orange-500" />;
-      case "detect_vulnerability_func":
-        return <Search className="h-5 w-5 text-purple-500" />;
-      case "explain_vulnerability_func":
-        return <Info className="h-5 w-5 text-green-500" />;
-      case "error":
-        return <XCircle className="h-5 w-5 text-destructive" />;
-      default:
-        return <Info className="h-5 w-5 text-primary" />;
-    }
-  };
-
-  const getNodeTitle = (nodeType: string) => {
-    switch (nodeType) {
-      case "convert_to_fcg":
-        return "Function Call Graph Generation";
-      case "detect_vulnerability_src":
-        return "Source Code Vulnerability Detection";
-      case "detect_vulnerability_func":
-        return "Function-level Vulnerability Detection";
-      case "explain_vulnerability_func":
-        return "Vulnerability Explanation";
-      case "error":
-        return "Analysis Error";
-      default:
-        return "Analysis Step";
-    }
-  };
-
-  const getVulnerabilityBadgeColor = (predicted_class: string) => {
-    return predicted_class === "Vulnerable" ? "destructive" : "default";
-  };
-
-  const getPredictionBadgeColor = (prediction: number) => {
-    return prediction === 1 ? "destructive" : "default";
-  };
-
   if (results.length === 0 && !isStreaming) {
     return null;
   }
 
+  const errors = results.filter((r) => r.node === "error" && r.output?.error);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Analysis Results</h2>
+    <section className="space-y-6" aria-labelledby="analysis-results-head">
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="analysis-results-head" className="text-xl">Analysis Results</h2>
         {isStreaming && (
-          <Badge variant="outline" className="gap-2">
-            <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
-            Analyzing...
+          <Badge variant="signal" role="status">
+            <span className="stage__spin keep-motion" aria-hidden="true" />
+            Analyzing…
           </Badge>
         )}
       </div>
 
-      <div className="grid gap-4">
-        {results.map((result, index) => (
-          <Card
-            key={index}
-            className="glass p-6 transition-smooth hover:shadow-glow animate-in fade-in slide-in-from-bottom-4"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <div className="flex items-start gap-4">
-              <div className="mt-1">{getNodeIcon(result.node)}</div>
-              
-              <div className="flex-1 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                      {getNodeTitle(result.node)}
-                    </h3>
-                    <Badge variant="outline" className="mb-2">
-                      {result.node}
-                    </Badge>
-                  </div>
-                  
-                  <Badge variant="default">
-                    Step {index + 1}
-                  </Badge>
-                </div>
+      <PipelineTrail results={results} isStreaming={isStreaming} renderDetail={renderDetail} />
 
-                {/* Handle different node types */}
-                {result.node === "convert_to_fcg" && result.output?.fcg_file_path && (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm text-foreground">
-                      <span className="font-semibold">FCG File Path: </span>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">{result.output.fcg_file_path}</code>
-                    </p>
-                  </div>
-                )}
-
-                {result.node === "detect_vulnerability_src" && result.output && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium">Prediction:</span>
-                      <Badge variant={getVulnerabilityBadgeColor(result.output.predicted_class) as any}>
-                        {result.output.predicted_class}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Confidence: {(result.output.confidence_score * 100).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {result.node === "detect_vulnerability_func" && result.output && (
-                  <div className="space-y-4">
-                    {result.output.fcg_edges && (
-                      <div className="bg-muted/50 rounded-lg p-4">
-                        <p className="text-sm font-medium mb-2">Function Call Graph Edges:</p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {JSON.stringify(result.output.fcg_edges)}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Function Graph Visualization */}
-                    {result.output.fcg_edges && result.output.func_vulnerability_predictions && (
-                      <FunctionGraphVisualization 
-                        fcgEdges={result.output.fcg_edges}
-                        funcVulnerabilityPredictions={result.output.func_vulnerability_predictions}
-                      />
-                    )}
-                    
-                    {result.output.func_vulnerability_predictions && (
-                      <div>
-                        <p className="text-sm font-medium mb-3">Function Vulnerability Predictions:</p>
-                        <Accordion type="single" collapsible className="space-y-2">
-                          {result.output.func_vulnerability_predictions.map((func: any, idx: number) => (
-                            <AccordionItem key={idx} value={`function-${idx}`} className="border rounded-lg">
-                              <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                                <div className="flex items-center justify-between w-full mr-4">
-                                  <span className="text-sm font-medium text-left">
-                                    {func.function_name}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant={getPredictionBadgeColor(func.prediction) as any} className="text-xs">
-                                      {func.prediction === 1 ? "Vulnerable" : "Safe"}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {func.confidence}
-                                    </span>
-                                  </div>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="px-4 pb-4">
-                                <div className="bg-muted/30 rounded-lg p-3">
-                                  <p className="text-xs font-medium mb-2">Function Code:</p>
-                                  <pre className="text-xs text-white dark:text-white whitespace-pre-wrap font-mono overflow-x-auto">
-                                    {func.function_code}
-                                  </pre>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {result.node === "explain_vulnerability_func" && result.output?.explanations && (
-                  <div className="space-y-4">
-                    <p className="text-sm font-medium">Vulnerability Explanations:</p>
-                    {result.output.explanations.map((explanation: any, idx: number) => (
-                      <div key={idx} className="border border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <AlertTriangle className="h-5 w-5 text-orange-500 mt-1 flex-shrink-0" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">
-                              {explanation.function_name}
-                            </h4>
-                            <div className="text-sm text-orange-700 dark:text-orange-300 whitespace-pre-wrap leading-relaxed">
-                              {explanation.explanation}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {result.node === "error" && result.output?.error && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <XCircle className="h-5 w-5 text-destructive mt-1" />
-                      <div>
-                        <h4 className="font-semibold text-destructive mb-1">Analysis Error</h4>
-                        <p className="text-sm text-destructive/90">{result.output.error}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
+      {errors.map((error, idx) => (
+        <div key={idx} role="alert" className="flex items-start gap-3 rounded-md bg-bad-soft p-4">
+          <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-bad" aria-hidden="true" />
+          <div>
+            <h3 className="text-base text-bad">Analysis Error</h3>
+            <p className="mt-1 text-sm text-ink-2">{error.output.error}</p>
+          </div>
+        </div>
+      ))}
+    </section>
   );
 };
