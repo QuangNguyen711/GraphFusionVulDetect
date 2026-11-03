@@ -42,6 +42,12 @@ class UserInDB(BaseModel):
     is_active: bool = True
     created_at: datetime
     last_login: Optional[datetime] = None
+    token_version: int = 0
+    password_changed_at: Optional[datetime] = None
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6)
 
 # Project related schemas
 class ProjectStatus(str, Enum):
