@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { MessageSquare, X, Send, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageSquare, X, Send, Square, Loader2, CheckCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { refactorBotService, ConversationMessage, RefactoringSuggestion } from "@/services/refactorbot";
+import { refactorBotService, ConversationMessage } from "@/services/refactorbot";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useT } from "@/i18n";
@@ -21,6 +21,15 @@ interface RefactorChatbotProps {
   vulnerableFunctions: VulnerableFunction[];
 }
 
+const lastSolidityBlock = (messages: ConversationMessage[]) => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== "assistant") continue;
+    const blocks = [...messages[i].content.matchAll(/```(?:solidity|sol)?\s*\n([\s\S]*?)```/g)];
+    if (blocks.length) return blocks[blocks.length - 1][1].trim();
+  }
+  return "";
+};
+
 export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) => {
   const t = useT();
   const [isOpen, setIsOpen] = useState(false);
@@ -28,175 +37,100 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<RefactoringSuggestion[]>([]);
-  const [explanation, setExplanation] = useState("");
-  const [suggestedCode, setSuggestedCode] = useState("");
-  const [analysisCache, setAnalysisCache] = useState<Record<string, {
-    history: ConversationMessage[],
-    suggestions: RefactoringSuggestion[],
-    explanation: string,
-    code: string
-  }>>({});
+  const [error, setError] = useState("");
+  const cacheRef = useRef<Record<string, ConversationMessage[]>>({});
+  const abortRef = useRef<AbortController | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Filter only vulnerable functions (prediction === 1)
   const vulnerableOnly = vulnerableFunctions.filter(f => f.prediction === 1);
+  const suggestedCode = useMemo(() => (isLoading ? "" : lastSolidityBlock(conversationHistory)), [conversationHistory, isLoading]);
 
-  const handleSelectFunction = async (functionName: string) => {
-    const func = vulnerableOnly.find(f => f.function_name === functionName);
-    if (!func) return;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [conversationHistory, error, isLoading]);
 
-    setSelectedFunction(func);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
-    // Check cache
-    if (analysisCache[functionName]) {
-      const cached = analysisCache[functionName];
-      setConversationHistory(cached.history);
-      setSuggestions(cached.suggestions);
-      setExplanation(cached.explanation);
-      setSuggestedCode(cached.code);
-      return;
-    }
-
-    setConversationHistory([]);
-    setSuggestions([]);
-    setExplanation("");
-    setSuggestedCode("");
+  // history must end with a user message; streams the reply into a new assistant message
+  const requestReply = async (func: VulnerableFunction, history: ConversationMessage[]) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setError("");
     setIsLoading(true);
-
+    setConversationHistory(history);
+    let reply = "";
+    const show = () => {
+      const next = reply ? [...history, { role: "assistant" as const, content: reply }] : history;
+      cacheRef.current[func.function_name] = next;
+      setConversationHistory(next);
+    };
     try {
-      // Get initial refactoring advice
-      const response = await refactorBotService.getRefactoringAdvice(
-        func.function_code,
-        `This function "${func.function_name}" has been flagged as vulnerable. Please analyze and suggest refactoring.`
-      );
-
-      setSuggestions(response.suggestions);
-      setExplanation(response.explanation);
-      
-      // Extract code from suggestions if available
-      let codeSnippet = response.suggestions.find(s => s.code)?.code || "";
-      if (codeSnippet) {
-        setSuggestedCode(codeSnippet);
+      await refactorBotService.streamChat(func.function_code, history, (delta) => {
+        reply += delta;
+        show();
+      }, controller.signal);
+    } catch (err) {
+      if (controller.signal.aborted) {
+        show();
+      } else {
+        console.error("RefactorBot stream failed:", err);
+        cacheRef.current[func.function_name] = history;
+        setConversationHistory(history);
+        setError(err instanceof Error ? err.message : t("Failed to send message"));
       }
-
-      const initialHistory: ConversationMessage[] = [
-        {
-          role: "assistant",
-          content: response.explanation
-        }
-      ];
-
-      // Add to conversation history
-      setConversationHistory(initialHistory);
-
-      // Save to cache
-      setAnalysisCache(prev => ({
-        ...prev,
-        [functionName]: {
-          history: initialHistory,
-          suggestions: response.suggestions,
-          explanation: response.explanation,
-          code: codeSnippet
-        }
-      }));
-
-      toast.success(t("Analysis complete"));
-    } catch (error) {
-      console.error("Error getting refactoring advice:", error);
-      toast.error(error instanceof Error ? error.message : t("Failed to analyze function"));
     } finally {
-      setIsLoading(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !selectedFunction) return;
-
-    const userMessage: ConversationMessage = {
-      role: "user",
-      content: inputMessage
-    };
-
-    // Add user message to history
-    const newHistory = [...conversationHistory, userMessage];
-    setConversationHistory(newHistory);
-    setInputMessage("");
-    setIsLoading(true);
-
-    try {
-      // Continue conversation
-      const response = await refactorBotService.continueConversation(
-        suggestedCode || selectedFunction.function_code,
-        newHistory
-      );
-
-      // Add assistant response to history
-      const assistantMessage: ConversationMessage = {
-        role: "assistant",
-        content: response.bot_message
-      };
-      
-      const updatedHistory = [...newHistory, assistantMessage];
-      setConversationHistory(updatedHistory);
-
-      // Update suggested code if provided
-      let newCode = suggestedCode;
-      if (response.suggested_code) {
-        newCode = response.suggested_code;
-        setSuggestedCode(newCode);
-      }
-      
-      // Update Cache
-      setAnalysisCache(prev => ({
-        ...prev,
-        [selectedFunction.function_name]: {
-            ...prev[selectedFunction.function_name],
-            history: updatedHistory,
-            code: newCode
-        }
-      }));
-
-    } catch (error) {
-      console.error("Error continuing conversation:", error);
-      toast.error(error instanceof Error ? error.message : t("Failed to send message"));
-    } finally {
+  const handleSelectFunction = (functionName: string) => {
+    const func = vulnerableOnly.find(f => f.function_name === functionName);
+    if (!func) return;
+    abortRef.current?.abort();
+    setSelectedFunction(func);
+    setError("");
+    const cached = cacheRef.current[functionName];
+    if (cached && cached.length > 1) {
       setIsLoading(false);
+      setConversationHistory(cached);
+      return;
     }
+    requestReply(func, [{
+      role: "user",
+      content: `The function "${func.function_name}" was flagged as vulnerable. Explain why, then give the fixed function.`
+    }]);
+  };
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim() || !selectedFunction || isLoading) return;
+    const history = [...conversationHistory, { role: "user" as const, content: inputMessage.trim() }];
+    setInputMessage("");
+    requestReply(selectedFunction, history);
+  };
+
+  const handleRetry = () => {
+    if (selectedFunction) requestReply(selectedFunction, conversationHistory);
   };
 
   const handleValidateCode = async () => {
     if (!selectedFunction || !suggestedCode) return;
-
-    setIsLoading(true);
     try {
-      const response = await refactorBotService.validateRefactoring(
-        selectedFunction.function_code,
-        suggestedCode
-      );
-
-      if (response.is_valid) {
-        toast.success(response.message);
-      } else {
-        toast.warning(response.message);
-      }
-    } catch (error) {
-      console.error("Error validating code:", error);
-      toast.error(error instanceof Error ? error.message : t("Failed to validate code"));
-    } finally {
-      setIsLoading(false);
+      const response = await refactorBotService.validateRefactoring(selectedFunction.function_code, suggestedCode);
+      if (response.is_valid) toast.success(response.message);
+      else toast.warning(response.message);
+    } catch (err) {
+      console.error("Error validating code:", err);
+      toast.error(err instanceof Error ? err.message : t("Failed to validate code"));
     }
   };
 
   if (vulnerableOnly.length === 0) {
     return null; // Don't show chatbot if no vulnerable functions
   }
-
-  const extraSuggestions = suggestions.filter(s => {
-    if (s.content && explanation && s.content.trim() === explanation.trim()) return false;
-    if (s.content && explanation && explanation.includes(s.content)) return false;
-    if (s.type === 'code_fix') return false;
-    return true;
-  });
 
   return (
     <>
@@ -232,7 +166,6 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
             <Select
               value={selectedFunction?.function_name || ""}
               onValueChange={handleSelectFunction}
-              disabled={isLoading}
             >
               <SelectTrigger aria-label={t("Vulnerable function")}>
                 <SelectValue placeholder={t("Select a vulnerable function to analyze…")} />
@@ -251,7 +184,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
             </Select>
           </div>
 
-          <ScrollArea className="flex-1 px-4 py-4">
+          <ScrollArea className="flex-1 px-4 py-4 [&>[data-radix-scroll-area-viewport]>div]:!block">
             {!selectedFunction ? (
               <div className="flex h-full flex-col items-start justify-center gap-2 py-16 text-sm text-muted-foreground">
                 <p className="text-ink-2">{t("Select a vulnerable function to start analysis")}</p>
@@ -267,7 +200,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                   </pre>
                 </div>
 
-                {conversationHistory.map((message, idx) => (
+                {conversationHistory.slice(1).map((message, idx) => (
                   <div key={idx} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                     {message.role === "user" ? (
                       <p className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-paper-3 px-3 py-2 text-sm text-ink">{message.content}</p>
@@ -303,7 +236,7 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                   <div className="rounded-md bg-ok-soft p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="text-xs text-ok">{t("Suggested Refactored Code")}</p>
-                      <Button size="sm" variant="outline" onClick={handleValidateCode} disabled={isLoading}>
+                      <Button size="sm" variant="outline" onClick={handleValidateCode}>
                         <CheckCircle className="h-3 w-3" />
                         {t("Validate")}
                       </Button>
@@ -314,35 +247,25 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                   </div>
                 )}
 
-                {extraSuggestions.length > 0 && (
-                  <ul className="divide-y divide-rule border-y border-rule">
-                    {extraSuggestions.map((suggestion, idx) => (
-                      <li key={idx} className="py-3">
-                        <p className="text-sm text-ink">{suggestion.description}</p>
-                        {suggestion.content && (
-                          <p className="mt-1 text-xs text-muted-foreground">{suggestion.content.slice(0, 150)}…</p>
-                        )}
-                        {suggestion.url && (
-                          <a
-                            href={suggestion.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-1 inline-block text-xs text-cool underline decoration-rule-2 underline-offset-4 hover:text-signal"
-                          >
-                            {t("Read the reference")}
-                          </a>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {isLoading && (
+                {isLoading && conversationHistory[conversationHistory.length - 1]?.role === "user" && (
                   <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
                     <Loader2 className="keep-motion h-4 w-4 animate-spin" aria-hidden="true" />
                     {t("Thinking…")}
                   </p>
                 )}
+
+                {error && (
+                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-bad-soft p-3">
+                    <p className="min-w-0 break-words text-sm text-ink-2">
+                      <span className="text-bad">{t("RefactorBot could not reply.")}</span> {error}
+                    </p>
+                    <Button size="sm" variant="outline" onClick={handleRetry}>
+                      <RotateCcw className="h-3 w-3" />
+                      {t("Try again")}
+                    </Button>
+                  </div>
+                )}
+                <div ref={bottomRef} />
               </div>
             )}
           </ScrollArea>
@@ -362,17 +285,16 @@ export const RefactorChatbot = ({ vulnerableFunctions }: RefactorChatbotProps) =
                     }
                   }}
                   className="min-h-[3.75rem] resize-none"
-                  disabled={isLoading}
                 />
-                <Button
-                  size="icon"
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  aria-label={t("Send")}
-                  aria-busy={isLoading}
-                >
-                  {isLoading ? <Loader2 className="keep-motion h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
+                {isLoading ? (
+                  <Button size="icon" variant="outline" onClick={() => abortRef.current?.abort()} aria-label={t("Stop")}>
+                    <Square className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button size="icon" onClick={handleSendMessage} disabled={!inputMessage.trim()} aria-label={t("Send")}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           )}
