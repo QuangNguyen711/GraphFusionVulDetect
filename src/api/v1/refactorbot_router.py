@@ -2,9 +2,11 @@
 API Router for RefactorBot Service - Smart Contract Refactoring Assistant
 """
 
+import json
 import logging
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from src.utils.language import normalize_language
 
@@ -202,6 +204,21 @@ async def continue_refactoring_conversation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}"
         )
+
+
+@router.post("/chat/stream")
+async def stream_refactoring_chat(
+    request: ConversationRequest,
+    current_user: UserInDB = Depends(get_current_user)
+):
+    """Stream the assistant's next reply as NDJSON: {"delta"} lines, then {"done"} or {"error"}."""
+    history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
+
+    async def events():
+        async for event in refactorbot_service.stream_chat(request.code, history, normalize_language(request.language)):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(events(), media_type="application/x-ndjson", headers={"X-Accel-Buffering": "no"})
 
 
 @router.post("/validate", response_model=ValidationResponse, status_code=status.HTTP_200_OK)

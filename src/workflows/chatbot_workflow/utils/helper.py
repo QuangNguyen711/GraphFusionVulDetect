@@ -5,6 +5,24 @@ Helper utilities for the chatbot refactoring workflow.
 import re
 from typing import List, Dict, Any
 
+from src.utils.language import language_instruction
+
+
+def build_chat_messages(code: str, conversation_history: List[Dict[str, str]], language: str = "en") -> List[Dict[str, str]]:
+    """Chat messages for the LLM: the code under discussion as system context, then the whole history."""
+    system = (
+        "You are RefactorBot, a smart contract security assistant. "
+        "The user is working on this Solidity code, which a detection model flagged as vulnerable:\n"
+        f"```solidity\n{code}\n```\n"
+        "Explain issues concretely and briefly. When you propose a fix, give the complete corrected "
+        "function in a single ```solidity block."
+    ) + language_instruction(language)
+    messages = [{"role": "system", "content": system}]
+    for msg in conversation_history:
+        role = "user" if msg.get("role") == "user" else "assistant"
+        messages.append({"role": role, "content": msg.get("content", "")})
+    return messages
+
 
 def clean_llm_response(response: str) -> str:
     """

@@ -88,9 +88,5 @@ def analyze_code(state: State, config: RunnableConfig) -> State:
         logger.error(f"Error during code analysis: {e}", exc_info=True)
         logger.error(f"State at error: code_length={len(code)}, issue_desc={issue_description}")
         state["analysis_result"] = {"error": f"Analysis failed: {str(e)}"}
-        # Remove faulty client from pool if needed
-        if llm_client and 'llm' in locals():
-            logger.warning(f"Removing faulty LLM client from pool")
-            llm_client.remove_instance(llm)
     
     return state

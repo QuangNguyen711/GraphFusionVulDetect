@@ -26,10 +26,7 @@ class LLMClient:
         self.top_p = top_p
         self.max_tokens = max_tokens
         
-        self.add_stop_token = ["---\n", "STOP_HERE"]
-        if add_stop_token:
-            self.add_stop_token.extend(add_stop_token)
-            logger.info(f"Stop tokens: {self.add_stop_token}")
+        self.add_stop_token = list(add_stop_token or [])
 
         # Khởi tạo Pool Clients
         self.clients = []
@@ -42,7 +39,7 @@ class LLMClient:
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 top_p=self.top_p,
-                stop=self.add_stop_token
+                stop=self.add_stop_token or None
             )
             self.clients.append(client)
         

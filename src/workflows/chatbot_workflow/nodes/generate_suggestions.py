@@ -133,9 +133,6 @@ def generate_refactoring_suggestions(state: State, config: RunnableConfig) -> St
         logger.error(f"State at error: code_length={len(code)}, issue={issue_description}")
         state["refactoring_suggestions"] = []
         state["explanation"] = f"Error generating suggestions: {str(e)}"
-        if llm_client and 'llm' in locals():
-            logger.warning(f"Removing faulty LLM client from pool")
-            llm_client.remove_instance(llm)
     
     return state
 
