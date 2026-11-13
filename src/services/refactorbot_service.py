@@ -1,7 +1,8 @@
 import os
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, AsyncIterator
 from src.workflows.chatbot_workflow.workflow import chatbot_workflow
+from src.workflows.chatbot_workflow.utils.helper import build_chat_messages
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,18 @@ class RefactorBotService:
                 "bot_message": f"I encountered an error while processing your request: {str(e)}",
                 "error": str(e)
             }
+
+    async def stream_chat(self, code: str, conversation_history: List[Dict[str, str]], language: str = "en") -> AsyncIterator[Dict[str, Any]]:
+        """Stream one assistant reply as events: {"delta": text}..., then {"done": True} or {"error": message}."""
+        try:
+            llm = self.workflow.llm_client.get_instance()
+            async for chunk in llm.astream(build_chat_messages(code, conversation_history, language)):
+                if chunk.content:
+                    yield {"delta": chunk.content}
+            yield {"done": True}
+        except Exception as e:
+            logger.error(f"Error while streaming chat: {e}", exc_info=True)
+            yield {"error": str(e)}
 
     def validate_suggested_refactoring(self, original_code: str, suggested_code: str) -> Tuple[bool, str]:
         """

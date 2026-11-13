@@ -94,8 +94,7 @@ class ChatbotWorkflow:
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            top_p=top_p,
-            add_stop_token=["```\n```", "STOP_REFACTORING"]
+            top_p=top_p
         )
         
         print(f"LLM client pool initialized with {len(api_keys)} API key(s)")

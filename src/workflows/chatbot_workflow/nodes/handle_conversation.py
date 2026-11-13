@@ -11,7 +11,7 @@ from src.workflows.chatbot_workflow.graph.state import State
 logger = logging.getLogger(__name__)
 
 
-from src.utils.language import language_instruction
+from src.workflows.chatbot_workflow.utils.helper import build_chat_messages
 
 def handle_conversation(state: State, config: RunnableConfig) -> State:
     """
@@ -35,28 +35,8 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
         llm = llm_client.get_instance()
         print(f"Got LLM instance for conversation handling")
         
-        # Build conversation context
-        messages = []
-        system_message = (
-            "You are a helpful smart contract refactoring assistant. "
-            "You help developers improve their Solidity code by providing "
-            "clear explanations, code examples, and best practices."
-        )
-        messages.append({"role": "system", "content": system_message})
-        
-        # Add conversation history
-        for msg in conversation_history:
-            messages.append(msg)
-        
-        # Add current code context
-        last_user_message = conversation_history[-1]["content"] if conversation_history else ""
-        
-        prompt = f"Current code under discussion:\n```solidity\n{code}\n```\n\n{last_user_message}" + language_instruction(state.get("language"))
-        
-        print(f"Sending conversation prompt to LLM (history length: {len(conversation_history)})")
-        print(f"Last user message: {last_user_message}...")
-        
-        response = llm.invoke(prompt)
+        messages = build_chat_messages(code, conversation_history, state.get("language"))
+        response = llm.invoke(messages)
         print(f"Received conversation response from LLM")
         print(f"Response content: {response.content if response.content else 'NONE'}...")
         
@@ -90,8 +70,5 @@ def handle_conversation(state: State, config: RunnableConfig) -> State:
         logger.error(f"Error in conversation handling: {e}", exc_info=True)
         logger.error(f"State at error: code_length={len(code)}, history_length={len(conversation_history)}")
         state["bot_message"] = f"I encountered an error: {str(e)}"
-        if llm_client and 'llm' in locals():
-            logger.warning(f"Removing faulty LLM client from pool")
-            llm_client.remove_instance(llm)
     
     return state

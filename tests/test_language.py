@@ -45,4 +45,4 @@ def test_conversation_prompt_follows_language():
     client = SimpleNamespace(get_instance=lambda: llm)
     state = {"code": "contract A {}", "language": "vi", "conversation_history": [{"role": "user", "content": "fix it"}]}
     handle_conversation(state, {"configurable": {"llm_client": client}})
-    assert llm.prompts and "Vietnamese" in llm.prompts[0]
+    assert llm.prompts and "Vietnamese" in llm.prompts[0][0]["content"]
